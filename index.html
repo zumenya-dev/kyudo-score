@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>弓道スコア</title>
+<style>
+:root {
+  --bg: #FAF9F6;
+  --hit: #C53D43;
+  --miss: #8B8B8B;
+  --kaichu: #D4A017;
+  --text: #1A1A1A;
+  --radius: 12px;
+  --spacing: 16px;
+  --tap-min: 48px;
+  --font-size: 16px;
+  --card-bg: #FFFFFF;
+  --border: #E0DDD8;
+  --accent: #2B5F7E;
+  --surface: #F0EFEB;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: var(--font-size); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+
+/* Layout */
+.app { max-width: 480px; margin: 0 auto; padding: var(--spacing); padding-bottom: 80px; }
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Header */
+.header { display: flex; align-items: center; gap: 8px; margin-bottom: var(--spacing); }
+.header h1 { font-size: 1.25rem; font-weight: 700; flex: 1; }
+.back-btn {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none; color: var(--accent);
+  font-size: 0.875rem; cursor: pointer; min-height: var(--tap-min);
+  padding: 0 8px;
+}
+.back-btn::before { content: '←'; font-size: 1.1rem; }
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+  margin-bottom: var(--spacing);
+}
+.card-header { font-weight: 600; margin-bottom: 8px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 20px;
+  border: none; border-radius: var(--radius);
+  font-size: 0.9375rem; font-weight: 600;
+  cursor: pointer; min-height: var(--tap-min);
+  transition: opacity 0.15s;
+}
+.btn:active { opacity: 0.7; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface); color: var(--text); }
+.btn-danger { background: #D94040; color: #fff; }
+.btn-block { display: flex; width: 100%; }
+.btn-sm { padding: 8px 14px; font-size: 0.8125rem; min-height: 36px; }
+
+/* Inputs */
+.input-group { margin-bottom: 12px; }
+.input-group label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 4px; color: #666; }
+.input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 1rem; background: var(--card-bg); color: var(--text);
+}
+.input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around;
+  padding: 6px 0 env(safe-area-inset-bottom, 8px);
+  z-index: 50;
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 12px;
+  font-size: 0.625rem; font-weight: 500; color: #999;
+  background: none; border: none; cursor: pointer;
+  min-height: var(--tap-min);
+}
+.nav-item .nav-icon { font-size: 1.25rem; }
+.nav-item.active { color: var(--accent); }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 100;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--card-bg);
+  border-radius: var(--radius) var(--radius) 0 0;
+  width: 100%; max-width: 480px;
+  max-height: 80dvh; overflow-y: auto;
+  padding: var(--spacing);
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing); }
+.modal-header h2 { font-size: 1.125rem; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 4px; min-height: var(--tap-min); min-width: var(--tap-min); }
+
+/* Score Input */
+.scoring-info { text-align: center; margin-bottom: var(--spacing); }
+.scoring-archer { font-size: 1.25rem; font-weight: 700; }
+.scoring-arrow { font-size: 0.875rem; color: #666; margin-top: 4px; }
+.scoring-progress { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.scoring-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.125rem; font-weight: 700;
+  border: 2px solid var(--border); background: var(--surface);
+}
+.scoring-dot.hit { background: var(--hit); color: #fff; border-color: var(--hit); }
+.scoring-dot.miss { background: var(--miss); color: #fff; border-color: var(--miss); }
+.scoring-dot.current { border-color: var(--accent); background: #fff; }
+
+.scoring-buttons {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing);
+  margin-top: var(--spacing);
+}
+.score-btn {
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius);
+  font-size: 3rem; font-weight: 700;
+  cursor: pointer;
+  min-height: 140px;
+  transition: transform 0.1s;
+}
+.score-btn:active { transform: scale(0.95); }
+.score-btn.hit-btn { background: var(--hit); color: #fff; }
+.score-btn.miss-btn { background: var(--miss); color: #fff; }
+
+.scoring-footer { display: flex; gap: 8px; margin-top: var(--spacing); }
+
+/* Tachi Row */
+.tachi-card { margin-bottom: 12px; }
+.tachi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.tachi-header span { font-weight: 600; }
+.tachi-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--surface);
+}
+.tachi-row:last-child { border-bottom: none; }
+.tachi-name { width: 60px; font-size: 0.8125rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tachi-arrows { display: flex; gap: 4px; flex: 1; }
+.arrow-mark {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8125rem; font-weight: 700;
+}
+.arrow-mark.hit { background: var(--hit); color: #fff; }
+.arrow-mark.miss { background: var(--miss); color: #fff; }
+.arrow-mark.pending { background: var(--surface); color: #ccc; }
+.tachi-score { font-size: 0.8125rem; font-weight: 600; min-width: 36px; text-align: right; }
+.kaichu-badge {
+  display: inline-block; padding: 2px 8px;
+  background: var(--kaichu); color: #fff;
+  border-radius: 10px; font-size: 0.6875rem; font-weight: 700;
+  margin-left: 4px;
+}
+
+/* Archer List */
+.archer-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--surface);
+}
+.archer-item:last-child { border-bottom: none; }
+.archer-name { flex: 1; font-weight: 500; }
+.archer-fav {
+  background: none; border: none; font-size: 1.25rem;
+  cursor: pointer; min-width: var(--tap-min); min-height: var(--tap-min);
+  display: flex; align-items: center; justify-content: center;
+}
+.archer-actions { display: flex; gap: 4px; }
+
+/* Stats */
+.stat-card { display: flex; align-items: baseline; gap: 8px; }
+.stat-value { font-size: 2rem; font-weight: 700; }
+.stat-label { font-size: 0.8125rem; color: #666; }
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: var(--spacing); }
+.stat-mini { text-align: center; padding: 12px 8px; }
+.stat-mini .stat-value { font-size: 1.5rem; }
+.progress-row { margin-bottom: 12px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 0.8125rem; margin-bottom: 4px; }
+.progress-bar { height: 20px; background: var(--surface); border-radius: 10px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--hit); border-radius: 10px; transition: width 0.3s; }
+.progress-fill.high { background: var(--kaichu); }
+
+.bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 8px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; height: 100%; }
+.bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 2px; transition: height 0.3s; }
+.bar-label { font-size: 0.5625rem; color: #999; }
+
+/* Checkbox item for modals */
+.check-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--surface);
+  cursor: pointer;
+}
+.check-item:last-child { border-bottom: none; }
+.check-box {
+  width: 24px; height: 24px; border: 2px solid var(--border);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.check-item.selected .check-box { background: var(--accent); border-color: var(--accent); color: #fff; }
+.check-item.selected .check-box::after { content: '✓'; font-size: 0.875rem; font-weight: 700; }
+.check-label { font-weight: 500; }
+.check-sub { font-size: 0.75rem; color: #999; }
+
+/* Filter tabs */
+.filter-tabs { display: flex; gap: 4px; margin-bottom: var(--spacing); overflow-x: auto; }
+.filter-tab {
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--card-bg);
+  font-size: 0.8125rem; cursor: pointer; white-space: nowrap;
+  min-height: 36px;
+}
+.filter-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Dev Panel */
+.dev-toggle {
+  position: fixed; bottom: 72px; right: 12px;
+  width: 44px; height: 44px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 50%;
+  font-size: 0.75rem; font-weight: 700;
+  cursor: pointer; z-index: 60;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.dev-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 300px; max-width: 100vw;
+  background: var(--card-bg);
+  border-left: 1px solid var(--border);
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.dev-panel.open { transform: translateX(0); }
+.dev-panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px var(--spacing);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.dev-panel-header h2 { font-size: 1rem; font-weight: 700; }
+.dev-panel-body {
+  flex: 1; overflow-y: auto; padding: var(--spacing);
+  -webkit-overflow-scrolling: touch;
+}
+.dev-section { margin-bottom: var(--spacing); }
+.dev-section-title {
+  font-size: 0.8125rem; font-weight: 700; color: #666;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  padding: 8px 0; user-select: none;
+}
+.dev-section-title::before { content: '▼'; font-size: 0.625rem; transition: transform 0.2s; }
+.dev-section.collapsed .dev-section-title::before { transform: rotate(-90deg); }
+.dev-section.collapsed .dev-section-content { display: none; }
+.dev-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.dev-label { font-size: 0.75rem; min-width: 72px; color: #555; }
+.dev-input { flex: 1; }
+.dev-input input[type="color"] { width: 40px; height: 30px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 2px; }
+.dev-input input[type="range"] { width: 100%; accent-color: var(--accent); }
+.dev-input input[type="number"], .dev-input input[type="text"], .dev-input select {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 0.8125rem; background: var(--card-bg); color: var(--text);
+}
+.dev-input label { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer; }
+.dev-range-val { font-size: 0.6875rem; color: #999; min-width: 36px; text-align: right; }
+.dev-code {
+  background: #1E1E1E; color: #D4D4D4; padding: 12px;
+  border-radius: var(--radius); font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.6875rem; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 200px; overflow-y: auto;
+}
+.dev-panel-footer {
+  padding: 12px var(--spacing);
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+  flex-shrink: 0;
+}
+.dev-actions { display: flex; gap: 8px; }
+.dev-actions .btn { flex: 1; }
+.dev-note { font-size: 0.6875rem; color: #999; line-height: 1.4; }
+.dev-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3); z-index: 190;
+}
+.dev-overlay.open { display: block; }
+
+/* Session summary */
+.session-summary {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: var(--spacing);
+}
+.summary-item { text-align: center; padding: 8px; background: var(--surface); border-radius: var(--radius); }
+.summary-value { font-size: 1.5rem; font-weight: 700; }
+.summary-label { font-size: 0.6875rem; color: #666; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 40px 20px; color: #999; }
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.empty-state p { font-size: 0.875rem; line-height: 1.5; }
+
+/* Scoring complete */
+.complete-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+  animation: fadeIn 0.2s;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.complete-card {
+  background: var(--card-bg); border-radius: var(--radius);
+  padding: 32px; text-align: center; max-width: 320px; width: 90%;
+  animation: popIn 0.3s ease;
+}
+@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.complete-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; }
+
+/* Responsive: phone full screen dev panel */
+@media (max-width: 640px) {
+  .dev-panel { width: 100vw; }
+}
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* Tachi complete animation */
+.tachi-complete { animation: highlightBg 0.5s ease; }
+@keyframes highlightBg { 0%,100% { background: var(--card-bg); } 50% { background: #FFFDE7; } }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Home Screen -->
+  <div class="screen" id="screen-home">
+    <div class="header">
+      <h1>弓道スコア</h1>
+    </div>
+    <div id="home-content"></div>
+  </div>
+
+  <!-- Session Screen -->
+  <div class="screen" id="screen-session">
+    <div class="header">
+      <button class="back-btn" onclick="Router.go('home')">戻る</button>
+      <h1 id="session-title"></h1>
+    </div>
+    <div id="session-content"></div>
+  </div>
+
+  <!-- Scoring Screen -->
+  <div class="screen" id="screen-scoring">
+    <div class="header">
+      <button class="back-btn" id="scoring-back-btn">中断</button>
+      <h1>スコア入力</h1>
+    </div>
+    <div id="scoring-content"></div>
+  </div>
+
+  <!-- Archers Screen -->
+  <div class="screen" id="screen-archers">
+    <div class="header">
+      <h1>射手管理</h1>
+    </div>
+    <div id="archers-content"></div>
+  </div>
+
+  <!-- Stats Screen -->
+  <div class="screen" id="screen-stats">
+    <div class="header">
+      <h1>統計</h1>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="nav-item" data-screen="home"><span class="nav-icon">🏠</span>ホーム</button>
+  <button class="nav-item" data-screen="archers"><span class="nav-icon">🧑</span>射手</button>
+  <button class="nav-item" data-screen="stats"><span class="nav-icon">📊</span>統計</button>
+</nav>
+
+<!-- Dev Panel Toggle -->
+<button class="dev-toggle" id="dev-toggle" title="開発パネル">&lt;/&gt;</button>
+
+<!-- Dev Panel Overlay (mobile) -->
+<div class="dev-overlay" id="dev-overlay"></div>
+
+<!-- Dev Panel -->
+<div class="dev-panel" id="dev-panel">
+  <div class="dev-panel-header">
+    <h2>&lt;/&gt; 開発パネル</h2>
+    <button class="modal-close" id="dev-close">&times;</button>
+  </div>
+  <div class="dev-panel-body" id="dev-panel-body"></div>
+  <div class="dev-panel-footer">
+    <div class="dev-actions">
+      <button class="btn btn-secondary btn-sm" id="dev-reset">リセット</button>
+      <button class="btn btn-primary btn-sm" id="dev-apply-js">JS適用</button>
+    </div>
+    <div class="dev-actions">
+      <button class="btn btn-secondary btn-sm" id="dev-export">エクスポート</button>
+      <button class="btn btn-secondary btn-sm" id="dev-import">インポート</button>
+    </div>
+    <div class="dev-note">CSS変数はリアルタイム反映。JS変数は「JS適用」で反映されます。</div>
+  </div>
+</div>
+
+<!-- Modal Container -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- File input for import -->
+<input type="file" id="import-file" accept=".json" style="display:none">
+
+<script>
+'use strict';
+
+/* ============================================================
+   AppConfig — JS variables editable from dev panel
+   ============================================================ */
+const AppConfig = {
+  arrowsPerRound: 4,
+  hitSymbol: '○',
+  missSymbol: '×',
+  dateFormat: 'MM/DD',
+  enableVibration: true,
+  autoAdvance: true,
+  hitRateDecimals: 1,
+};
+
+const APP_CONFIG_DEFAULTS = { ...AppConfig };
+
+/* ============================================================
+   Store — localStorage CRUD
+   ============================================================ */
+class Store {
+  static KEY_ARCHERS = 'kyudo_archers';
+  static KEY_SESSIONS = 'kyudo_sessions';
+  static KEY_SETTINGS = 'kyudo_settings';
+
+  static _get(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
+  }
+  static _set(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  // ID
+  static uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  // Archers
+  static getArchers() { return this._get(this.KEY_ARCHERS) || []; }
+  static saveArchers(list) { this._set(this.KEY_ARCHERS, list); }
+  static addArcher(name) {
+    const list = this.getArchers();
+    const a = { id: this.uid(), name, active: true, favorite: false, createdAt: new Date().toISOString() };
+    list.push(a);
+    this.saveArchers(list);
+    return a;
+  }
+  static updateArcher(id, updates) {
+    const list = this.getArchers();
+    const idx = list.findIndex(a => a.id === id);
+    if (idx >= 0) { Object.assign(list[idx], updates); this.saveArchers(list); }
+  }
+  static deleteArcher(id) { this.updateArcher(id, { active: false }); }
+  static getActiveArchers() { return this.getArchers().filter(a => a.active); }
+
+  // Sessions
+  static getSessions() { return this._get(this.KEY_SESSIONS) || []; }
+  static saveSessions(list) { this._set(this.KEY_SESSIONS, list); }
+  static getSession(id) { return this.getSessions().find(s => s.id === id) || null; }
+  static addSession(date, location, note) {
+    const list = this.getSessions();
+    const s = { id: this.uid(), date, location: location || '', note: note || '', tpieces: [], createdAt: new Date().toISOString() };
+    list.push(s);
+    this.saveSessions(list);
+    return s;
+  }
+  static updateSession(id, updates) {
+    const list = this.getSessions();
+    const idx = list.findIndex(s => s.id === id);
+    if (idx >= 0) { Object.assign(list[idx], updates); this.saveSessions(list); }
+  }
+  static deleteSession(id) {
+    const list = this.getSessions().filter(s => s.id !== id);
+    this.saveSessions(list);
+  }
+
+  // Settings
+  static getSettings() { return this._get(this.KEY_SETTINGS) || {}; }
+  static saveSettings(s) { this._set(this.KEY_SETTINGS, s); }
+
+  // Export / Import
+  static exportAll() {
+    return JSON.stringify({
+      archers: this.getArchers(),
+      sessions: this.getSessions(),
+      settings: this.getSettings(),
+      exportedAt: new Date().toISOString(),
+    }, null, 2);
+  }
+  static importAll(json) {
+    const data = JSON.parse(json);
+    if (data.archers) this.saveArchers(data.archers);
+    if (data.sessions) this.saveSessions(data.sessions);
+    if (data.settings) this.saveSettings(data.settings);
+  }
+}
+
+/* ============================================================
+   KyudoCalc — calculations
+   ============================================================ */
+class KyudoCalc {
+  static hitRate(arrows) {
+    const valid = arrows.filter(a => a !== null && a !== undefined);
+    if (!valid.length) return 0;
+    return valid.filter(a => a === 1).length / valid.length * 100;
+  }
+  static hitCount(arrows) { return arrows.filter(a => a === 1).length; }
+  static totalValid(arrows) { return arrows.filter(a => a !== null && a !== undefined).length; }
+  static isKaichu(arrows) {
+    const n = AppConfig.arrowsPerRound;
+    const valid = arrows.filter(a => a !== null && a !== undefined);
+    return valid.length === n && valid.every(a => a === 1);
+  }
+  static sessionStats(session) {
+    let totalShots = 0, totalHits = 0, kaichuCount = 0;
+    for (const tachi of (session.tpieces || [])) {
+      for (const entry of (tachi.entries || [])) {
+        const valid = (entry.arrows || []).filter(a => a !== null && a !== undefined);
+        totalShots += valid.length;
+        totalHits += valid.filter(a => a === 1).length;
+        if (this.isKaichu(entry.arrows || [])) kaichuCount++;
+      }
+    }
+    return { totalShots, totalHits, kaichuCount, hitRate: totalShots ? totalHits / totalShots * 100 : 0 };
+  }
+  static archerStats(archerId, sessions) {
+    let totalShots = 0, totalHits = 0, kaichuCount = 0;
+    for (const s of sessions) {
+      for (const tachi of (s.tpieces || [])) {
+        for (const entry of (tachi.entries || [])) {
+          if (entry.archerId !== archerId) continue;
+          const valid = (entry.arrows || []).filter(a => a !== null && a !== undefined);
+          totalShots += valid.length;
+          totalHits += valid.filter(a => a === 1).length;
+          if (this.isKaichu(entry.arrows || [])) kaichuCount++;
+        }
+      }
+    }
+    return { totalShots, totalHits, kaichuCount, hitRate: totalShots ? totalHits / totalShots * 100 : 0 };
+  }
+  static filterSessions(sessions, period) {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    switch (period) {
+      case 'today': return sessions.filter(s => new Date(s.date) >= startOfDay);
+      case 'week': { const d = new Date(startOfDay); d.setDate(d.getDate() - 7); return sessions.filter(s => new Date(s.date) >= d); }
+      case 'month': { const d = new Date(startOfDay); d.setMonth(d.getMonth() - 1); return sessions.filter(s => new Date(s.date) >= d); }
+      default: return sessions;
+    }
+  }
+}
+
+/* ============================================================
+   Router — hash-based SPA routing
+   ============================================================ */
+class Router {
+  static currentScreen = 'home';
+  static init() {
+    window.addEventListener('hashchange', () => this.route());
+    this.route();
+  }
+  static go(hash) { location.hash = '#' + hash; }
+  static route() {
+    const hash = location.hash.slice(1) || 'home';
+    const parts = hash.split('/');
+    const screen = parts[0];
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    this.currentScreen = screen;
+
+    switch (screen) {
+      case 'home':
+        HomeScreen.render();
+        break;
+      case 'session':
+        SessionScreen.render(parts[1]);
+        break;
+      case 'scoring':
+        ScoringScreen.render(parts[1], parts[2]);
+        break;
+      case 'archers':
+        ArcherScreen.render();
+        break;
+      case 'stats':
+        StatsScreen.render();
+        break;
+      default:
+        HomeScreen.render();
+        break;
+    }
+
+    const el = document.getElementById('screen-' + screen);
+    if (el) el.classList.add('active');
+
+    // Nav highlight
+    const navBtn = document.querySelector(`.nav-item[data-screen="${screen}"]`);
+    if (navBtn) navBtn.classList.add('active');
+
+    // Hide nav on scoring
+    document.getElementById('bottom-nav').style.display = screen === 'scoring' ? 'none' : 'flex';
+    document.getElementById('dev-toggle').style.display = screen === 'scoring' ? 'none' : 'flex';
+  }
+}
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const y = d.getFullYear();
+  switch (AppConfig.dateFormat) {
+    case 'YYYY-MM-DD': return `${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    case 'M月D日': return `${m}月${day}日`;
+    default: return `${String(m).padStart(2,'0')}/${String(day).padStart(2,'0')}`;
+  }
+}
+function arrowLabel(idx) {
+  const labels = ['甲矢','乙矢','3本目','4本目','5本目','6本目','7本目','8本目'];
+  return labels[idx] || `${idx+1}本目`;
+}
+function vibrate(ms = 30) {
+  if (AppConfig.enableVibration && navigator.vibrate) navigator.vibrate(ms);
+}
+function openModal(html) {
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function getArcherName(id) {
+  const a = Store.getArchers().find(x => x.id === id);
+  return a ? a.name : '不明';
+}
+
+/* ============================================================
+   HomeScreen
+   ============================================================ */
+class HomeScreen {
+  static render() {
+    const sessions = Store.getSessions().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const container = document.getElementById('home-content');
+
+    if (!sessions.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🎯</div>
+          <p>まだ稽古記録がありません<br>新しい稽古を始めましょう</p>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="HomeScreen.newSession()">新しい稽古を始める</button>
+      `;
+      return;
+    }
+
+    let html = `<button class="btn btn-primary btn-block" onclick="HomeScreen.newSession()" style="margin-bottom:var(--spacing)">新しい稽古を始める</button>`;
+    for (const s of sessions) {
+      const stats = KyudoCalc.sessionStats(s);
+      const tachiCount = (s.tpieces || []).length;
+      html += `
+        <div class="card" onclick="Router.go('session/${s.id}')" style="cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:600">${formatDate(s.date)}</div>
+              <div style="font-size:0.75rem;color:#999">${s.location || ''}${s.location && tachiCount ? ' / ' : ''}${tachiCount}立</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:1.25rem;font-weight:700">${stats.hitRate.toFixed(AppConfig.hitRateDecimals)}%</div>
+              <div style="font-size:0.75rem;color:#999">${stats.totalHits}/${stats.totalShots}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+  }
+
+  static newSession() {
+    const today = new Date().toISOString().split('T')[0];
+    openModal(`
+      <div class="modal-header">
+        <h2>新しい稽古</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="input-group">
+        <label>日付</label>
+        <input class="input" type="date" id="new-session-date" value="${today}">
+      </div>
+      <div class="input-group">
+        <label>場所（任意）</label>
+        <input class="input" type="text" id="new-session-location" placeholder="例: 道場名">
+      </div>
+      <div class="input-group">
+        <label>メモ（任意）</label>
+        <input class="input" type="text" id="new-session-note" placeholder="例: 大会練習">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="HomeScreen.createSession()">作成</button>
+    `);
+  }
+
+  static createSession() {
+    const date = document.getElementById('new-session-date').value;
+    const location = document.getElementById('new-session-location').value.trim();
+    const note = document.getElementById('new-session-note').value.trim();
+    if (!date) return;
+    const s = Store.addSession(date, location, note);
+    closeModal();
+    Router.go('session/' + s.id);
+  }
+}
+
+/* ============================================================
+   SessionScreen
+   ============================================================ */
+class SessionScreen {
+  static currentId = null;
+
+  static render(id) {
+    this.currentId = id;
+    const session = Store.getSession(id);
+    if (!session) { Router.go('home'); return; }
+
+    document.getElementById('session-title').textContent = formatDate(session.date);
+    const container = document.getElementById('session-content');
+
+    const stats = KyudoCalc.sessionStats(session);
+    let html = '';
+
+    // Summary
+    html += `<div class="session-summary">
+      <div class="summary-item"><div class="summary-value">${stats.hitRate.toFixed(AppConfig.hitRateDecimals)}%</div><div class="summary-label">的中率</div></div>
+      <div class="summary-item"><div class="summary-value">${stats.totalHits}<span style="font-size:0.875rem;font-weight:400">/${stats.totalShots}</span></div><div class="summary-label">的中/総射</div></div>
+    </div>`;
+
+    if (session.location || session.note) {
+      html += `<div style="font-size:0.8125rem;color:#666;margin-bottom:var(--spacing)">`;
+      if (session.location) html += `📍 ${session.location}`;
+      if (session.note) html += `${session.location ? '  ' : ''}📝 ${session.note}`;
+      html += `</div>`;
+    }
+
+    // Tachi list
+    const tpieces = session.tpieces || [];
+    if (!tpieces.length) {
+      html += `<div class="empty-state"><p>まだ立がありません</p></div>`;
+    } else {
+      tpieces.forEach((tachi, ti) => {
+        html += `<div class="card tachi-card">
+          <div class="tachi-header">
+            <span>${ti + 1}立目</span>
+            <button class="btn btn-sm btn-secondary" onclick="SessionScreen.editTachi(${ti})">編集</button>
+          </div>`;
+        for (const entry of (tachi.entries || [])) {
+          const arrows = entry.arrows || [];
+          const hitCount = KyudoCalc.hitCount(arrows);
+          const total = KyudoCalc.totalValid(arrows);
+          const kaichu = KyudoCalc.isKaichu(arrows);
+          html += `<div class="tachi-row">
+            <div class="tachi-name">${getArcherName(entry.archerId)}</div>
+            <div class="tachi-arrows">`;
+          for (let i = 0; i < AppConfig.arrowsPerRound; i++) {
+            const a = arrows[i];
+            if (a === 1) html += `<span class="arrow-mark hit">${AppConfig.hitSymbol}</span>`;
+            else if (a === 0) html += `<span class="arrow-mark miss">${AppConfig.missSymbol}</span>`;
+            else html += `<span class="arrow-mark pending">-</span>`;
+          }
+          html += `</div><div class="tachi-score">${hitCount}/${total}${kaichu ? '<span class="kaichu-badge">皆中</span>' : ''}</div></div>`;
+        }
+        html += `</div>`;
+      });
+    }
+
+    html += `<button class="btn btn-primary btn-block" onclick="SessionScreen.addTachi()">立を追加</button>`;
+    html += `<button class="btn btn-danger btn-block btn-sm" style="margin-top:8px" onclick="SessionScreen.deleteSessionConfirm()">この稽古を削除</button>`;
+
+    container.innerHTML = html;
+  }
+
+  static addTachi() {
+    const archers = Store.getActiveArchers();
+    if (!archers.length) {
+      openModal(`
+        <div class="modal-header"><h2>射手が未登録です</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+        <p style="margin-bottom:var(--spacing)">先に射手を登録してください。</p>
+        <button class="btn btn-primary btn-block" onclick="closeModal();Router.go('archers')">射手管理へ</button>
+      `);
+      return;
+    }
+    // Sort: favorites first
+    const sorted = [...archers].sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+    let listHtml = '';
+    for (const a of sorted) {
+      listHtml += `<div class="check-item" data-id="${a.id}" onclick="SessionScreen.toggleArcher(this)">
+        <div class="check-box"></div>
+        <div><div class="check-label">${a.name}</div>${a.favorite ? '<div class="check-sub">★ お気に入り</div>' : ''}</div>
+      </div>`;
+    }
+    openModal(`
+      <div class="modal-header"><h2>射手を選択</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div id="archer-select-list">${listHtml}</div>
+      <button class="btn btn-primary btn-block" style="margin-top:var(--spacing)" onclick="SessionScreen.confirmAddTachi()">スコア入力へ</button>
+    `);
+  }
+
+  static toggleArcher(el) {
+    el.classList.toggle('selected');
+    vibrate(15);
+  }
+
+  static confirmAddTachi() {
+    const selected = [...document.querySelectorAll('#archer-select-list .check-item.selected')]
+      .map(el => el.dataset.id);
+    if (!selected.length) return;
+
+    const session = Store.getSession(this.currentId);
+    if (!session) return;
+    if (!session.tpieces) session.tpieces = [];
+
+    const tachiId = Store.uid();
+    const tachi = {
+      id: tachiId,
+      entries: selected.map(archerId => ({ archerId, arrows: [] })),
+    };
+    session.tpieces.push(tachi);
+    Store.updateSession(session.id, { tpieces: session.tpieces });
+    closeModal();
+    Router.go(`scoring/${session.id}/${tachiId}`);
+  }
+
+  static editTachi(tachiIndex) {
+    const session = Store.getSession(this.currentId);
+    if (!session) return;
+    const tachi = session.tpieces[tachiIndex];
+    if (!tachi) return;
+    Router.go(`scoring/${session.id}/${tachi.id}`);
+  }
+
+  static deleteSessionConfirm() {
+    openModal(`
+      <div class="modal-header"><h2>稽古を削除</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="margin-bottom:var(--spacing)">この稽古の全データが削除されます。よろしいですか？</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">キャンセル</button>
+        <button class="btn btn-danger" style="flex:1" onclick="SessionScreen.doDelete()">削除</button>
+      </div>
+    `);
+  }
+
+  static doDelete() {
+    Store.deleteSession(this.currentId);
+    closeModal();
+    Router.go('home');
+  }
+}
+
+/* ============================================================
+   ScoringScreen — the core ○/× input
+   ============================================================ */
+class ScoringScreen {
+  static sessionId = null;
+  static tachiId = null;
+  static entryIndex = 0;
+  static arrowIndex = 0;
+
+  static render(sessionId, tachiId) {
+    this.sessionId = sessionId;
+    this.tachiId = tachiId;
+    this.entryIndex = 0;
+    this.arrowIndex = 0;
+
+    const session = Store.getSession(sessionId);
+    if (!session) { Router.go('home'); return; }
+    const tachi = (session.tpieces || []).find(t => t.id === tachiId);
+    if (!tachi) { Router.go('session/' + sessionId); return; }
+
+    // Find first incomplete entry/arrow
+    let found = false;
+    for (let ei = 0; ei < tachi.entries.length; ei++) {
+      const arrows = tachi.entries[ei].arrows || [];
+      for (let ai = 0; ai < AppConfig.arrowsPerRound; ai++) {
+        if (arrows[ai] === null || arrows[ai] === undefined) {
+          this.entryIndex = ei;
+          this.arrowIndex = ai;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+    }
+    if (!found) {
+      // All complete — position at last
+      this.entryIndex = tachi.entries.length - 1;
+      this.arrowIndex = AppConfig.arrowsPerRound - 1;
+    }
+
+    document.getElementById('scoring-back-btn').onclick = () => {
+      Router.go('session/' + sessionId);
+    };
+
+    this.renderUI();
+  }
+
+  static renderUI() {
+    const session = Store.getSession(this.sessionId);
+    const tachi = (session.tpieces || []).find(t => t.id === this.tachiId);
+    if (!tachi) return;
+
+    const entries = tachi.entries || [];
+    const entry = entries[this.entryIndex];
+    if (!entry) return;
+
+    const archerName = getArcherName(entry.archerId);
+    const arrows = entry.arrows || [];
+
+    // Check if all entries complete
+    const allComplete = entries.every(e =>
+      (e.arrows || []).filter(a => a !== null && a !== undefined).length >= AppConfig.arrowsPerRound
+    );
+
+    if (allComplete) {
+      this.showComplete(tachi);
+      return;
+    }
+
+    // Progress dots
+    let dotsHtml = '';
+    for (let i = 0; i < AppConfig.arrowsPerRound; i++) {
+      const a = arrows[i];
+      let cls = '';
+      if (i === this.arrowIndex) cls = 'current';
+      if (a === 1) cls = 'hit';
+      else if (a === 0) cls = 'miss';
+      const symbol = a === 1 ? AppConfig.hitSymbol : (a === 0 ? AppConfig.missSymbol : (i === this.arrowIndex ? '▶' : ''));
+      dotsHtml += `<div class="scoring-dot ${cls}">${symbol}</div>`;
+    }
+
+    // Archer tabs
+    let tabsHtml = '<div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px">';
+    entries.forEach((e, i) => {
+      const name = getArcherName(e.archerId);
+      const complete = (e.arrows || []).filter(a => a !== null && a !== undefined).length >= AppConfig.arrowsPerRound;
+      const active = i === this.entryIndex;
+      tabsHtml += `<span style="padding:4px 10px;border-radius:12px;font-size:0.75rem;font-weight:${active?'700':'400'};background:${active?'var(--accent)':'var(--surface)'};color:${active?'#fff':'var(--text)'}">${name}${complete ? ' ✓' : ''}</span>`;
+    });
+    tabsHtml += '</div>';
+
+    const isCurrentArrowSet = arrows[this.arrowIndex] !== null && arrows[this.arrowIndex] !== undefined;
+
+    document.getElementById('scoring-content').innerHTML = `
+      ${tabsHtml}
+      <div class="scoring-info">
+        <div class="scoring-archer">${archerName}</div>
+        <div class="scoring-arrow">${arrowLabel(this.arrowIndex)}（${this.entryIndex + 1}/${entries.length}人目）</div>
+        <div class="scoring-progress">${dotsHtml}</div>
+      </div>
+      <div class="scoring-buttons">
+        <button class="score-btn hit-btn" onclick="ScoringScreen.record(1)">${AppConfig.hitSymbol}</button>
+        <button class="score-btn miss-btn" onclick="ScoringScreen.record(0)">${AppConfig.missSymbol}</button>
+      </div>
+      <div class="scoring-footer">
+        <button class="btn btn-secondary" style="flex:1" onclick="ScoringScreen.undo()">← 1本戻す</button>
+      </div>
+    `;
+  }
+
+  static record(value) {
+    vibrate(value === 1 ? 20 : 40);
+
+    const session = Store.getSession(this.sessionId);
+    const tachi = (session.tpieces || []).find(t => t.id === this.tachiId);
+    if (!tachi) return;
+
+    const entry = tachi.entries[this.entryIndex];
+    if (!entry.arrows) entry.arrows = [];
+    entry.arrows[this.arrowIndex] = value;
+
+    // Save immediately
+    Store.updateSession(session.id, { tpieces: session.tpieces });
+
+    if (AppConfig.autoAdvance) {
+      // Advance to next arrow or next archer
+      if (this.arrowIndex < AppConfig.arrowsPerRound - 1) {
+        this.arrowIndex++;
+      } else {
+        // Next archer
+        if (this.entryIndex < tachi.entries.length - 1) {
+          this.entryIndex++;
+          this.arrowIndex = 0;
+        } else {
+          // All done — re-render will show complete
+        }
+      }
+    }
+
+    this.renderUI();
+  }
+
+  static undo() {
+    const session = Store.getSession(this.sessionId);
+    const tachi = (session.tpieces || []).find(t => t.id === this.tachiId);
+    if (!tachi) return;
+
+    // Move back
+    if (this.arrowIndex > 0) {
+      this.arrowIndex--;
+    } else if (this.entryIndex > 0) {
+      this.entryIndex--;
+      this.arrowIndex = AppConfig.arrowsPerRound - 1;
+    } else {
+      return; // At the very beginning
+    }
+
+    const entry = tachi.entries[this.entryIndex];
+    if (entry.arrows) {
+      entry.arrows[this.arrowIndex] = null;
+      Store.updateSession(session.id, { tpieces: session.tpieces });
+    }
+
+    vibrate(10);
+    this.renderUI();
+  }
+
+  static showComplete(tachi) {
+    let resultHtml = '';
+    for (const entry of tachi.entries) {
+      const arrows = entry.arrows || [];
+      const kaichu = KyudoCalc.isKaichu(arrows);
+      const hits = KyudoCalc.hitCount(arrows);
+      resultHtml += `<div class="tachi-row">
+        <div class="tachi-name">${getArcherName(entry.archerId)}</div>
+        <div class="tachi-arrows">`;
+      for (let i = 0; i < AppConfig.arrowsPerRound; i++) {
+        const a = arrows[i];
+        if (a === 1) resultHtml += `<span class="arrow-mark hit">${AppConfig.hitSymbol}</span>`;
+        else if (a === 0) resultHtml += `<span class="arrow-mark miss">${AppConfig.missSymbol}</span>`;
+        else resultHtml += `<span class="arrow-mark pending">-</span>`;
+      }
+      resultHtml += `</div><div class="tachi-score">${hits}/${AppConfig.arrowsPerRound}${kaichu ? '<span class="kaichu-badge">皆中</span>' : ''}</div></div>`;
+    }
+
+    document.getElementById('scoring-content').innerHTML = `
+      <div class="complete-overlay" onclick="event.target===this && ScoringScreen.goBack()">
+        <div class="complete-card">
+          <div class="complete-title">立 完了</div>
+          ${resultHtml}
+          <button class="btn btn-primary btn-block" style="margin-top:var(--spacing)" onclick="ScoringScreen.goBack()">セッションに戻る</button>
+        </div>
+      </div>
+    `;
+    vibrate(50);
+  }
+
+  static goBack() {
+    Router.go('session/' + this.sessionId);
+  }
+}
+
+/* ============================================================
+   ArcherScreen
+   ============================================================ */
+class ArcherScreen {
+  static render() {
+    const archers = Store.getActiveArchers();
+    const container = document.getElementById('archers-content');
+
+    let html = `
+      <div style="display:flex;gap:8px;margin-bottom:var(--spacing)">
+        <input class="input" type="text" id="new-archer-name" placeholder="射手名を入力" style="flex:1">
+        <button class="btn btn-primary" onclick="ArcherScreen.add()">追加</button>
+      </div>
+    `;
+
+    if (!archers.length) {
+      html += `<div class="empty-state"><div class="empty-icon">🧑</div><p>射手が登録されていません</p></div>`;
+    } else {
+      html += '<div class="card">';
+      for (const a of archers) {
+        html += `<div class="archer-item">
+          <button class="archer-fav" onclick="ArcherScreen.toggleFav('${a.id}')" title="お気に入り">${a.favorite ? '★' : '☆'}</button>
+          <div class="archer-name">${a.name}</div>
+          <div class="archer-actions">
+            <button class="btn btn-sm btn-secondary" onclick="ArcherScreen.edit('${a.id}')">編集</button>
+            <button class="btn btn-sm btn-danger" onclick="ArcherScreen.remove('${a.id}')">削除</button>
+          </div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+
+    // Enter key
+    setTimeout(() => {
+      const inp = document.getElementById('new-archer-name');
+      if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') ArcherScreen.add(); });
+    }, 0);
+  }
+
+  static add() {
+    const inp = document.getElementById('new-archer-name');
+    const name = inp.value.trim();
+    if (!name) return;
+    Store.addArcher(name);
+    inp.value = '';
+    vibrate(15);
+    this.render();
+  }
+
+  static toggleFav(id) {
+    const a = Store.getArchers().find(x => x.id === id);
+    if (a) {
+      Store.updateArcher(id, { favorite: !a.favorite });
+      vibrate(15);
+      this.render();
+    }
+  }
+
+  static edit(id) {
+    const a = Store.getArchers().find(x => x.id === id);
+    if (!a) return;
+    openModal(`
+      <div class="modal-header"><h2>射手を編集</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="input-group">
+        <label>名前</label>
+        <input class="input" type="text" id="edit-archer-name" value="${a.name}">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="ArcherScreen.saveEdit('${id}')">保存</button>
+    `);
+  }
+
+  static saveEdit(id) {
+    const name = document.getElementById('edit-archer-name').value.trim();
+    if (!name) return;
+    Store.updateArcher(id, { name });
+    closeModal();
+    this.render();
+  }
+
+  static remove(id) {
+    openModal(`
+      <div class="modal-header"><h2>射手を削除</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <p style="margin-bottom:var(--spacing)">この射手を削除しますか？過去の記録は保持されます。</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">キャンセル</button>
+        <button class="btn btn-danger" style="flex:1" onclick="ArcherScreen.doRemove('${id}')">削除</button>
+      </div>
+    `);
+  }
+
+  static doRemove(id) {
+    Store.deleteArcher(id);
+    closeModal();
+    this.render();
+  }
+}
+
+/* ============================================================
+   StatsScreen
+   ============================================================ */
+class StatsScreen {
+  static period = 'all';
+
+  static render() {
+    const container = document.getElementById('stats-content');
+    const allSessions = Store.getSessions();
+    const sessions = KyudoCalc.filterSessions(allSessions, this.period);
+    const archers = Store.getActiveArchers();
+
+    // Filter tabs
+    let html = `<div class="filter-tabs">
+      ${['today','week','month','all'].map(p => {
+        const labels = { today: '今日', week: '今週', month: '今月', all: '全期間' };
+        return `<button class="filter-tab ${this.period===p?'active':''}" onclick="StatsScreen.setPeriod('${p}')">${labels[p]}</button>`;
+      }).join('')}
+    </div>`;
+
+    // Overall stats
+    let totalShots = 0, totalHits = 0, totalKaichu = 0;
+    for (const s of sessions) {
+      const st = KyudoCalc.sessionStats(s);
+      totalShots += st.totalShots;
+      totalHits += st.totalHits;
+      totalKaichu += st.kaichuCount;
+    }
+    const overallRate = totalShots ? (totalHits / totalShots * 100) : 0;
+
+    html += `<div class="stat-row">
+      <div class="card stat-mini"><div class="stat-value">${overallRate.toFixed(AppConfig.hitRateDecimals)}%</div><div class="stat-label">的中率</div></div>
+      <div class="card stat-mini"><div class="stat-value">${totalHits}<span style="font-size:0.75rem">/${totalShots}</span></div><div class="stat-label">的中/総射</div></div>
+      <div class="card stat-mini"><div class="stat-value">${totalKaichu}</div><div class="stat-label">皆中</div></div>
+    </div>`;
+
+    // Per archer
+    if (archers.length && totalShots > 0) {
+      html += `<div class="card"><div class="card-header">射手別的中率</div>`;
+      const archerData = archers.map(a => {
+        const st = KyudoCalc.archerStats(a.id, sessions);
+        return { ...a, ...st };
+      }).filter(a => a.totalShots > 0).sort((a, b) => b.hitRate - a.hitRate);
+
+      for (const a of archerData) {
+        const high = a.hitRate >= 75;
+        html += `<div class="progress-row">
+          <div class="progress-label"><span>${a.name}</span><span>${a.hitRate.toFixed(AppConfig.hitRateDecimals)}% (${a.totalHits}/${a.totalShots})${a.kaichuCount ? ' 皆中' + a.kaichuCount : ''}</span></div>
+          <div class="progress-bar"><div class="progress-fill ${high?'high':''}" style="width:${a.hitRate}%"></div></div>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Bar chart — per session hit rate
+    if (sessions.length > 1) {
+      html += `<div class="card"><div class="card-header">稽古ごとの推移</div><div class="bar-chart">`;
+      const sorted = [...sessions].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-14);
+      const maxRate = 100;
+      for (const s of sorted) {
+        const st = KyudoCalc.sessionStats(s);
+        const pct = st.hitRate;
+        const h = Math.max(2, pct / maxRate * 100);
+        html += `<div class="bar-col">
+          <div class="bar" style="height:${h}%" title="${pct.toFixed(1)}%"></div>
+          <div class="bar-label">${formatDate(s.date)}</div>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+
+    if (!totalShots) {
+      html += `<div class="empty-state"><p>選択期間のデータがありません</p></div>`;
+    }
+
+    container.innerHTML = html;
+  }
+
+  static setPeriod(p) {
+    this.period = p;
+    this.render();
+  }
+}
+
+/* ============================================================
+   DevPanel — CSS / JS variable editor + code preview
+   ============================================================ */
+class DevPanel {
+  static CSS_DEFAULTS = {
+    '--bg': '#FAF9F6',
+    '--hit': '#C53D43',
+    '--miss': '#8B8B8B',
+    '--kaichu': '#D4A017',
+    '--text': '#1A1A1A',
+    '--radius': '12px',
+    '--spacing': '16px',
+    '--tap-min': '48px',
+    '--font-size': '16px',
+  };
+
+  static isOpen = false;
+
+  static init() {
+    document.getElementById('dev-toggle').addEventListener('click', () => this.toggle());
+    document.getElementById('dev-close').addEventListener('click', () => this.close());
+    document.getElementById('dev-overlay').addEventListener('click', () => this.close());
+    document.getElementById('dev-reset').addEventListener('click', () => this.reset());
+    document.getElementById('dev-apply-js').addEventListener('click', () => this.applyConfig());
+    document.getElementById('dev-export').addEventListener('click', () => this.exportData());
+    document.getElementById('dev-import').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', (e) => this.importData(e));
+
+    this.loadFromSettings();
+    this.render();
+  }
+
+  static toggle() {
+    this.isOpen ? this.close() : this.open();
+  }
+
+  static open() {
+    this.isOpen = true;
+    document.getElementById('dev-panel').classList.add('open');
+    document.getElementById('dev-overlay').classList.add('open');
+    this.render();
+  }
+
+  static close() {
+    this.isOpen = false;
+    document.getElementById('dev-panel').classList.remove('open');
+    document.getElementById('dev-overlay').classList.remove('open');
+  }
+
+  static render() {
+    const body = document.getElementById('dev-panel-body');
+    const style = getComputedStyle(document.documentElement);
+
+    const cssVars = [
+      { prop: '--bg', label: '背景色', type: 'color', tip: 'アプリ全体の背景色' },
+      { prop: '--hit', label: '的中色', type: 'color', tip: '的中(○)の表示色' },
+      { prop: '--miss', label: '外れ色', type: 'color', tip: '外れ(×)の表示色' },
+      { prop: '--kaichu', label: '皆中色', type: 'color', tip: '皆中バッジの色' },
+      { prop: '--text', label: '文字色', type: 'color', tip: '基本の文字色' },
+      { prop: '--radius', label: '角丸', type: 'range', min: 0, max: 24, unit: 'px', tip: 'カードやボタンの角丸' },
+      { prop: '--spacing', label: '余白', type: 'range', min: 4, max: 32, unit: 'px', tip: '要素間の余白' },
+      { prop: '--tap-min', label: '最小タップ', type: 'range', min: 32, max: 80, unit: 'px', tip: 'ボタンの最小サイズ' },
+      { prop: '--font-size', label: '文字サイズ', type: 'range', min: 12, max: 24, unit: 'px', tip: '基本の文字サイズ' },
+    ];
+
+    let html = '';
+
+    // CSS section
+    html += `<div class="dev-section" id="dev-sec-css">
+      <div class="dev-section-title" onclick="DevPanel.toggleSection('dev-sec-css')">見た目（CSS）</div>
+      <div class="dev-section-content">`;
+    for (const v of cssVars) {
+      const cur = style.getPropertyValue(v.prop).trim() || this.CSS_DEFAULTS[v.prop];
+      if (v.type === 'color') {
+        html += `<div class="dev-row">
+          <div class="dev-label" title="${v.tip}">${v.label}</div>
+          <div class="dev-input"><input type="color" value="${cur}" data-css="${v.prop}" oninput="DevPanel.applyCss('${v.prop}', this.value)"></div>
+        </div>`;
+      } else if (v.type === 'range') {
+        const numVal = parseInt(cur) || 0;
+        html += `<div class="dev-row">
+          <div class="dev-label" title="${v.tip}">${v.label}</div>
+          <div class="dev-input"><input type="range" min="${v.min}" max="${v.max}" value="${numVal}" data-css="${v.prop}" data-unit="${v.unit}" oninput="DevPanel.applyCss('${v.prop}', this.value + '${v.unit}'); this.nextElementSibling.textContent=this.value+'${v.unit}'"><span class="dev-range-val">${numVal}${v.unit}</span></div>
+        </div>`;
+      }
+    }
+    html += `</div></div>`;
+
+    // JS section
+    html += `<div class="dev-section" id="dev-sec-js">
+      <div class="dev-section-title" onclick="DevPanel.toggleSection('dev-sec-js')">ロジック（JS）</div>
+      <div class="dev-section-content">`;
+
+    html += `<div class="dev-row"><div class="dev-label" title="1立あたりの矢数">矢数/立</div><div class="dev-input"><input type="number" min="2" max="8" value="${AppConfig.arrowsPerRound}" id="dev-arrowsPerRound"></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="的中の表示記号">的中記号</div><div class="dev-input"><input type="text" value="${AppConfig.hitSymbol}" id="dev-hitSymbol" maxlength="4"></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="外れの表示記号">外れ記号</div><div class="dev-input"><input type="text" value="${AppConfig.missSymbol}" id="dev-missSymbol" maxlength="4"></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="日付の表示形式">日付形式</div><div class="dev-input"><select id="dev-dateFormat">
+      <option value="MM/DD" ${AppConfig.dateFormat==='MM/DD'?'selected':''}>MM/DD</option>
+      <option value="YYYY-MM-DD" ${AppConfig.dateFormat==='YYYY-MM-DD'?'selected':''}>YYYY-MM-DD</option>
+      <option value="M月D日" ${AppConfig.dateFormat==='M月D日'?'selected':''}>M月D日</option>
+    </select></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="タップ時の振動">振動</div><div class="dev-input"><label><input type="checkbox" ${AppConfig.enableVibration?'checked':''} id="dev-enableVibration"> 有効</label></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="入力後の自動進行">自動進行</div><div class="dev-input"><label><input type="checkbox" ${AppConfig.autoAdvance?'checked':''} id="dev-autoAdvance"> 有効</label></div></div>`;
+    html += `<div class="dev-row"><div class="dev-label" title="的中率の小数桁数">小数桁数</div><div class="dev-input"><input type="number" min="0" max="3" value="${AppConfig.hitRateDecimals}" id="dev-hitRateDecimals"></div></div>`;
+
+    html += `</div></div>`;
+
+    // Code preview
+    html += `<div class="dev-section" id="dev-sec-code">
+      <div class="dev-section-title" onclick="DevPanel.toggleSection('dev-sec-code')">現在の値（読み取り専用）</div>
+      <div class="dev-section-content"><div class="dev-code" id="dev-code-preview"></div></div>
+    </div>`;
+
+    // Learning note
+    html += `<div class="dev-note" style="margin-top:8px">
+      CSS Custom Properties (変数) で色やサイズを一元管理しています。
+      <code>document.documentElement.style.setProperty()</code> で JavaScript から CSS 変数を動的に変更できます。
+    </div>`;
+
+    body.innerHTML = html;
+    this.renderCodePreview();
+  }
+
+  static toggleSection(id) {
+    document.getElementById(id).classList.toggle('collapsed');
+  }
+
+  static applyCss(prop, val) {
+    document.documentElement.style.setProperty(prop, val);
+    this.saveToSettings();
+    this.renderCodePreview();
+  }
+
+  static applyConfig() {
+    AppConfig.arrowsPerRound = parseInt(document.getElementById('dev-arrowsPerRound').value) || 4;
+    AppConfig.hitSymbol = document.getElementById('dev-hitSymbol').value || '○';
+    AppConfig.missSymbol = document.getElementById('dev-missSymbol').value || '×';
+    AppConfig.dateFormat = document.getElementById('dev-dateFormat').value;
+    AppConfig.enableVibration = document.getElementById('dev-enableVibration').checked;
+    AppConfig.autoAdvance = document.getElementById('dev-autoAdvance').checked;
+    AppConfig.hitRateDecimals = parseInt(document.getElementById('dev-hitRateDecimals').value) || 0;
+
+    this.saveToSettings();
+    this.renderCodePreview();
+    vibrate(20);
+
+    // Re-render current screen
+    Router.route();
+  }
+
+  static reset() {
+    // Reset CSS
+    for (const [prop, val] of Object.entries(this.CSS_DEFAULTS)) {
+      document.documentElement.style.setProperty(prop, val);
+    }
+    // Reset JS
+    Object.assign(AppConfig, APP_CONFIG_DEFAULTS);
+    this.saveToSettings();
+    this.render();
+    vibrate(30);
+    Router.route();
+  }
+
+  static renderCodePreview() {
+    const el = document.getElementById('dev-code-preview');
+    if (!el) return;
+
+    const style = getComputedStyle(document.documentElement);
+    const cssLines = Object.keys(this.CSS_DEFAULTS).map(prop => {
+      const val = style.getPropertyValue(prop).trim() || this.CSS_DEFAULTS[prop];
+      return `  ${prop}: ${val};`;
+    }).join('\n');
+
+    const jsLines = Object.entries(AppConfig).map(([k, v]) => {
+      const val = typeof v === 'string' ? `"${v}"` : v;
+      return `  ${k}: ${val},`;
+    }).join('\n');
+
+    el.textContent = `:root {\n${cssLines}\n}\n\nAppConfig = {\n${jsLines}\n}`;
+  }
+
+  static saveToSettings() {
+    const settings = Store.getSettings();
+    // Save CSS
+    const style = getComputedStyle(document.documentElement);
+    settings.css = {};
+    for (const prop of Object.keys(this.CSS_DEFAULTS)) {
+      const val = document.documentElement.style.getPropertyValue(prop);
+      if (val) settings.css[prop] = val;
+    }
+    // Save JS config
+    settings.jsConfig = { ...AppConfig };
+    Store.saveSettings(settings);
+  }
+
+  static loadFromSettings() {
+    const settings = Store.getSettings();
+    // Restore CSS
+    if (settings.css) {
+      for (const [prop, val] of Object.entries(settings.css)) {
+        document.documentElement.style.setProperty(prop, val);
+      }
+    }
+    // Restore JS config
+    if (settings.jsConfig) {
+      Object.assign(AppConfig, settings.jsConfig);
+    }
+  }
+
+  static exportData() {
+    const json = Store.exportAll();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kyudo-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    vibrate(20);
+  }
+
+  static importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        Store.importAll(reader.result);
+        this.loadFromSettings();
+        this.render();
+        Router.route();
+        vibrate(30);
+        alert('インポートが完了しました');
+      } catch (err) {
+        alert('インポートに失敗しました: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+}
+
+/* ============================================================
+   Bootstrap
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Nav buttons
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => Router.go(btn.dataset.screen));
+  });
+
+  // Close modal on overlay click
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  // Init dev panel
+  DevPanel.init();
+
+  // Start router
+  Router.init();
+});
+</script>
+</body>
+</html>
