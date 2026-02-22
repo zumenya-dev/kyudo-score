@@ -1,7 +1,52 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><meta charset="UTF-8"></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTMLライブエディタ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; }
+  #preview {
+    flex: 1; padding: 16px; overflow: auto;
+    border-bottom: 3px solid #2B5F7E;
+  }
+  #editor-area {
+    flex: 1; display: flex; flex-direction: column;
+    background: #1E1E1E;
+  }
+  #editor-area label {
+    padding: 8px 12px; font-size: 13px; font-weight: 700;
+    color: #999; background: #161616;
+  }
+  #code {
+    flex: 1; width: 100%; border: none; resize: none;
+    padding: 12px; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 14px; line-height: 1.6;
+    color: #D4D4D4; background: #1E1E1E;
+    outline: none;
+  }
+</style>
+</head>
 <body>
-<h1>あ</h1>
+
+<div id="preview"></div>
+
+<div id="editor-area">
+  <label>HTML / CSS / JS を編集 → リアルタイム反映</label>
+  <textarea id="code"><h1 style="color: crimson;">あ</h1></textarea>
+</div>
+
+<script>
+  const code = document.getElementById('code');
+  const preview = document.getElementById('preview');
+
+  function update() {
+    preview.innerHTML = code.value;
+  }
+
+  code.addEventListener('input', update);
+  update();
+</script>
 </body>
 </html>
