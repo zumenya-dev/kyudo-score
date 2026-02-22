@@ -3,50 +3,312 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTMLライブエディタ</title>
+<title>にほんごコード</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; }
+  body { font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; background: #f5f5f5; }
+
+  /* Preview */
   #preview {
-    flex: 1; padding: 16px; overflow: auto;
-    border-bottom: 3px solid #2B5F7E;
+    flex: 1; padding: 16px; overflow: auto; background: #fff;
+    border-bottom: 2px solid #ddd;
+    min-height: 30dvh;
   }
-  #editor-area {
-    flex: 1; display: flex; flex-direction: column;
-    background: #1E1E1E;
+
+  /* Input area */
+  #input-area {
+    padding: 8px; background: #fff; border-bottom: 2px solid #2B5F7E;
+    display: flex; flex-direction: column; gap: 6px;
   }
-  #editor-area label {
-    padding: 8px 12px; font-size: 13px; font-weight: 700;
-    color: #999; background: #161616;
+  #input-area label { font-size: 12px; font-weight: 700; color: #2B5F7E; }
+  #cmd-row { display: flex; gap: 6px; }
+  #cmd {
+    flex: 1; padding: 10px 12px; border: 2px solid #2B5F7E; border-radius: 8px;
+    font-size: 16px; outline: none; background: #FAFAFA;
   }
-  #code {
-    flex: 1; width: 100%; border: none; resize: none;
-    padding: 12px; font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 14px; line-height: 1.6;
-    color: #D4D4D4; background: #1E1E1E;
-    outline: none;
+  #cmd:focus { border-color: #C53D43; background: #fff; }
+  #run-btn {
+    padding: 10px 18px; background: #2B5F7E; color: #fff; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
   }
+  #run-btn:active { opacity: 0.7; }
+  #clear-btn {
+    padding: 10px 12px; background: #eee; color: #333; border: none;
+    border-radius: 8px; font-size: 14px; cursor: pointer;
+  }
+  .examples { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ex-btn {
+    padding: 4px 10px; background: #EEF2F7; border: 1px solid #D0D8E0;
+    border-radius: 12px; font-size: 11px; cursor: pointer; color: #2B5F7E;
+  }
+  .ex-btn:active { background: #D0D8E0; }
+
+  /* Code view */
+  #code-area {
+    background: #1E1E1E; overflow: auto;
+    max-height: 25dvh; min-height: 60px;
+  }
+  #code-area label {
+    display: block; padding: 6px 12px; font-size: 11px; font-weight: 700;
+    color: #666; background: #161616;
+  }
+  #generated-code {
+    padding: 8px 12px; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; line-height: 1.5; color: #D4D4D4; white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .kw { color: #569CD6; }
+  .str { color: #CE9178; }
+  .tag { color: #4EC9B0; }
+  .attr { color: #9CDCFE; }
+
+  /* History */
+  #history { font-size: 11px; color: #999; padding: 0 12px 4px; background: #1E1E1E; }
+  #history span { margin-right: 8px; }
 </style>
 </head>
 <body>
 
 <div id="preview"></div>
 
-<div id="editor-area">
-  <label>HTML / CSS / JS を編集 → リアルタイム反映</label>
-  <textarea id="code"><h1 style="color: crimson;">あ</h1></textarea>
+<div id="input-area">
+  <label>にほんごコード — 日本語で命令してみよう</label>
+  <div id="cmd-row">
+    <input id="cmd" type="text" placeholder='表示する（"あ"）' enterkeyhint="go">
+    <button id="run-btn">実行</button>
+    <button id="clear-btn">消す</button>
+  </div>
+  <div class="examples">
+    <button class="ex-btn" data-cmd='表示する("あ")'>表示する</button>
+    <button class="ex-btn" data-cmd='見出し("こんにちは")'>見出し</button>
+    <button class="ex-btn" data-cmd='色("赤")'>色</button>
+    <button class="ex-btn" data-cmd='大きさ(48)'>大きさ</button>
+    <button class="ex-btn" data-cmd='背景色("黄色")'>背景色</button>
+    <button class="ex-btn" data-cmd='ボタン("押してね")'>ボタン</button>
+    <button class="ex-btn" data-cmd='リスト("犬","猫","鳥")'>リスト</button>
+    <button class="ex-btn" data-cmd='くりかえす(5, "⭐")'>繰り返す</button>
+    <button class="ex-btn" data-cmd='ランダム色()'>ランダム色</button>
+  </div>
+</div>
+
+<div id="code-area">
+  <label>生成されたコード</label>
+  <div id="generated-code"></div>
+  <div id="history"></div>
 </div>
 
 <script>
-  const code = document.getElementById('code');
-  const preview = document.getElementById('preview');
+'use strict';
 
-  function update() {
-    preview.innerHTML = code.value;
+const preview = document.getElementById('preview');
+const cmdInput = document.getElementById('cmd');
+const codeView = document.getElementById('generated-code');
+const historyEl = document.getElementById('history');
+
+// State
+let currentStyle = {};
+let codeLines = [];
+let historyList = [];
+
+// Color map
+const colorMap = {
+  '赤':'red','青':'blue','緑':'green','黄色':'yellow','黄':'yellow',
+  '白':'white','黒':'black','紫':'purple','橙':'orange','オレンジ':'orange',
+  'ピンク':'pink','水色':'skyblue','灰色':'gray','茶色':'brown','金':'gold',
+  '銀':'silver','紺':'navy',
+};
+function resolveColor(c) { return colorMap[c] || c; }
+
+// Parse & execute
+function execute(raw) {
+  const cmd = raw.replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').replace(/"/g, '"').replace(/"/g, '"').replace(/、/g, ',');
+
+  let html = '';
+  let code = '';
+  let match;
+
+  // 表示する("text")
+  if ((match = cmd.match(/^表示する\("(.+?)"\)$/))) {
+    const text = match[1];
+    const style = styleStr();
+    html = `<p${style ? ` style="${style}"` : ''}>${text}</p>`;
+    code = html;
+  }
+  // 見出し("text") or 見出し("text", 2)
+  else if ((match = cmd.match(/^見出し\("(.+?)"(?:,(\d))?\)$/))) {
+    const text = match[1];
+    const level = match[2] || '1';
+    const style = styleStr();
+    html = `<h${level}${style ? ` style="${style}"` : ''}>${text}</h${level}>`;
+    code = html;
+  }
+  // 色("red")
+  else if ((match = cmd.match(/^色\("(.+?)"\)$/))) {
+    const c = resolveColor(match[1]);
+    currentStyle.color = c;
+    code = `/* 文字色を ${c} に変更 */`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // 大きさ(num)
+  else if ((match = cmd.match(/^大きさ\((\d+)\)$/))) {
+    currentStyle['font-size'] = match[1] + 'px';
+    code = `/* 文字サイズを ${match[1]}px に変更 */`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // 背景色("color")
+  else if ((match = cmd.match(/^背景色\("(.+?)"\)$/))) {
+    const c = resolveColor(match[1]);
+    preview.style.background = c;
+    code = `document.body.style.background = "${c}";`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // ボタン("text")
+  else if ((match = cmd.match(/^ボタン\("(.+?)"\)$/))) {
+    const text = match[1];
+    const id = 'btn-' + Date.now();
+    html = `<button id="${id}" onclick="this.textContent='押された！'" style="padding:12px 24px;font-size:18px;border-radius:8px;border:2px solid #2B5F7E;background:#EEF2F7;cursor:pointer">${text}</button>`;
+    code = `<button onclick="this.textContent='押された！'">${text}</button>`;
+  }
+  // リスト("a","b","c")
+  else if ((match = cmd.match(/^リスト\((.+)\)$/))) {
+    const items = match[1].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, '')) || [];
+    const style = styleStr();
+    html = `<ul${style ? ` style="${style}"` : ''}>` + items.map(i => `<li>${i}</li>`).join('') + '</ul>';
+    code = html;
+  }
+  // くりかえす(n, "text")
+  else if ((match = cmd.match(/^くりかえす\((\d+),"(.+?)"\)$/))) {
+    const n = parseInt(match[1]);
+    const text = match[2];
+    const style = styleStr();
+    html = `<p${style ? ` style="${style}"` : ''}>`;
+    for (let i = 0; i < n; i++) html += text;
+    html += '</p>';
+    code = `for (let i = 0; i < ${n}; i++) {\n  document.write("${text}");\n}`;
+  }
+  // ランダム色()
+  else if (cmd.match(/^ランダム色\(\)$/)) {
+    const c = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+    currentStyle.color = c;
+    code = `const color = "#" + Math.floor(Math.random()*16777215).toString(16);\n// → ${c}`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // 太字()
+  else if (cmd.match(/^太字\(\)$/)) {
+    currentStyle['font-weight'] = 'bold';
+    code = `/* 太字に変更 */`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // 斜体()
+  else if (cmd.match(/^斜体\(\)$/)) {
+    currentStyle['font-style'] = 'italic';
+    code = `/* 斜体に変更 */`;
+    addHistory(raw, code);
+    render(); return;
+  }
+  // リセット()
+  else if (cmd.match(/^リセット\(\)$/)) {
+    currentStyle = {};
+    preview.style.background = '#fff';
+    preview.innerHTML = '';
+    codeLines = [];
+    code = '/* リセット */';
+    addHistory(raw, code);
+    render(); return;
+  }
+  // 線("text")
+  else if ((match = cmd.match(/^線\("(.+?)"\)$/))) {
+    html = `<hr>`;
+    code = `<hr>`;
+  }
+  // リンク("text", "url")
+  else if ((match = cmd.match(/^リンク\("(.+?)","(.+?)"\)$/))) {
+    html = `<a href="${match[2]}" target="_blank" style="font-size:18px">${match[1]}</a>`;
+    code = html;
+  }
+  // 画像("url")
+  else if ((match = cmd.match(/^画像\("(.+?)"\)$/))) {
+    html = `<img src="${match[1]}" style="max-width:100%;border-radius:8px">`;
+    code = html;
+  }
+  // Unknown
+  else {
+    html = `<p style="color:#C53D43">？ 「${raw}」は分かりません。例: 表示する("あ")</p>`;
+    code = `// エラー: 未知のコマンド`;
   }
 
-  code.addEventListener('input', update);
-  update();
+  if (html) {
+    codeLines.push({ html, code, raw });
+  }
+  addHistory(raw, code);
+  render();
+}
+
+function styleStr() {
+  return Object.entries(currentStyle).map(([k,v]) => `${k}:${v}`).join(';');
+}
+
+function render() {
+  // Render preview
+  let allHtml = '';
+  for (const line of codeLines) {
+    allHtml += line.html;
+  }
+  preview.innerHTML = allHtml;
+
+  // Render code
+  let allCode = '';
+  for (const line of codeLines) {
+    allCode += line.code + '\n';
+  }
+  if (Object.keys(currentStyle).length) {
+    allCode += '\n/* 現在のスタイル: ' + styleStr() + ' */';
+  }
+  codeView.textContent = allCode || '// ここにコードが表示されます';
+}
+
+function addHistory(raw, code) {
+  historyList.push(raw);
+  if (historyList.length > 8) historyList.shift();
+  historyEl.innerHTML = historyList.map(h => `<span>▸ ${h}</span>`).join('');
+  render();
+}
+
+// Events
+document.getElementById('run-btn').addEventListener('click', () => {
+  const val = cmdInput.value.trim();
+  if (!val) return;
+  execute(val);
+  cmdInput.value = '';
+  cmdInput.focus();
+});
+
+cmdInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('run-btn').click();
+  }
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  execute('リセット()');
+  cmdInput.focus();
+});
+
+document.querySelectorAll('.ex-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    cmdInput.value = btn.dataset.cmd;
+    cmdInput.focus();
+  });
+});
+
+// Initial
+render();
 </script>
 </body>
 </html>
