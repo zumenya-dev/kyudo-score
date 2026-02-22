@@ -6,18 +6,22 @@
 <title>にほんごコード</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: sans-serif; height: 100dvh; display: flex; flex-direction: column; background: #f5f5f5; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    height: 100dvh; display: flex; flex-direction: column; background: #f5f5f5;
+  }
 
   /* Preview */
   #preview {
     flex: 1; padding: 16px; overflow: auto; background: #fff;
     border-bottom: 2px solid #ddd;
-    min-height: 30dvh;
+    min-height: 35dvh;
+    font-size: 18px;
   }
 
   /* Input area */
   #input-area {
-    padding: 8px; background: #fff; border-bottom: 2px solid #2B5F7E;
+    padding: 10px; background: #fff; border-bottom: 2px solid #2B5F7E;
     display: flex; flex-direction: column; gap: 6px;
   }
   #input-area label { font-size: 12px; font-weight: 700; color: #2B5F7E; }
@@ -27,15 +31,14 @@
     font-size: 16px; outline: none; background: #FAFAFA;
   }
   #cmd:focus { border-color: #C53D43; background: #fff; }
-  #run-btn {
-    padding: 10px 18px; background: #2B5F7E; color: #fff; border: none;
-    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+  .btn {
+    padding: 10px 16px; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
   }
-  #run-btn:active { opacity: 0.7; }
-  #clear-btn {
-    padding: 10px 12px; background: #eee; color: #333; border: none;
-    border-radius: 8px; font-size: 14px; cursor: pointer;
-  }
+  .btn:active { opacity: 0.7; }
+  #run-btn { background: #2B5F7E; color: #fff; }
+  #run-btn:disabled { background: #aaa; }
+  #clear-btn { background: #eee; color: #333; padding: 10px 12px; }
   .examples { display: flex; gap: 4px; flex-wrap: wrap; }
   .ex-btn {
     padding: 4px 10px; background: #EEF2F7; border: 1px solid #D0D8E0;
@@ -46,7 +49,7 @@
   /* Code view */
   #code-area {
     background: #1E1E1E; overflow: auto;
-    max-height: 25dvh; min-height: 60px;
+    max-height: 22dvh; min-height: 50px;
   }
   #code-area label {
     display: block; padding: 6px 12px; font-size: 11px; font-weight: 700;
@@ -57,258 +60,311 @@
     font-size: 12px; line-height: 1.5; color: #D4D4D4; white-space: pre-wrap;
     word-break: break-all;
   }
-  .kw { color: #569CD6; }
-  .str { color: #CE9178; }
-  .tag { color: #4EC9B0; }
-  .attr { color: #9CDCFE; }
+
+  /* Loading */
+  .loading { color: #2B5F7E; padding: 8px; font-size: 14px; }
+  .loading::after {
+    content: ''; display: inline-block; width: 12px; height: 12px;
+    border: 2px solid #2B5F7E; border-top-color: transparent;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    margin-left: 8px; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* API key setup */
+  #setup {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; flex: 1; padding: 24px; gap: 16px;
+  }
+  #setup h2 { font-size: 20px; }
+  #setup p { font-size: 14px; color: #666; text-align: center; line-height: 1.6; }
+  #setup input {
+    width: 100%; max-width: 360px; padding: 12px; border: 2px solid #ddd;
+    border-radius: 8px; font-size: 14px; font-family: monospace;
+  }
+  #setup input:focus { outline: none; border-color: #2B5F7E; }
+  #setup a { color: #2B5F7E; }
+  #setup .btn { width: 100%; max-width: 360px; padding: 14px; font-size: 16px; }
 
   /* History */
-  #history { font-size: 11px; color: #999; padding: 0 12px 4px; background: #1E1E1E; }
-  #history span { margin-right: 8px; }
+  #history {
+    font-size: 11px; color: #888; padding: 4px 12px 6px;
+    background: #1E1E1E; display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  #history span {
+    background: #2a2a2a; padding: 2px 8px; border-radius: 8px; cursor: pointer;
+  }
+  #history span:active { background: #444; }
+
+  /* Error */
+  .error { color: #C53D43; font-size: 13px; padding: 4px 0; }
 </style>
 </head>
 <body>
 
-<div id="preview"></div>
-
-<div id="input-area">
-  <label>にほんごコード — 日本語で命令してみよう</label>
-  <div id="cmd-row">
-    <input id="cmd" type="text" placeholder='表示する（"あ"）' enterkeyhint="go">
-    <button id="run-btn">実行</button>
-    <button id="clear-btn">消す</button>
-  </div>
-  <div class="examples">
-    <button class="ex-btn" data-cmd='表示する("あ")'>表示する</button>
-    <button class="ex-btn" data-cmd='見出し("こんにちは")'>見出し</button>
-    <button class="ex-btn" data-cmd='色("赤")'>色</button>
-    <button class="ex-btn" data-cmd='大きさ(48)'>大きさ</button>
-    <button class="ex-btn" data-cmd='背景色("黄色")'>背景色</button>
-    <button class="ex-btn" data-cmd='ボタン("押してね")'>ボタン</button>
-    <button class="ex-btn" data-cmd='リスト("犬","猫","鳥")'>リスト</button>
-    <button class="ex-btn" data-cmd='くりかえす(5, "⭐")'>繰り返す</button>
-    <button class="ex-btn" data-cmd='ランダム色()'>ランダム色</button>
-  </div>
+<!-- API Key Setup -->
+<div id="setup">
+  <h2>にほんごコード</h2>
+  <p>日本語で命令するとAIがコードを生成して<br>画面に表示します</p>
+  <p style="font-size:12px">Gemini APIキーを入力してください<br>
+    <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> で無料で取得できます
+  </p>
+  <input type="password" id="api-key-input" placeholder="AIza...">
+  <button class="btn" id="save-key-btn" style="background:#2B5F7E;color:#fff">はじめる</button>
 </div>
 
-<div id="code-area">
-  <label>生成されたコード</label>
-  <div id="generated-code"></div>
-  <div id="history"></div>
+<!-- Main App (hidden until key set) -->
+<div id="main-app" style="display:none;flex:1;display:none;flex-direction:column">
+  <div id="preview"></div>
+  <div id="input-area">
+    <label>にほんごコード — 日本語で自由に命令してみよう</label>
+    <div id="cmd-row">
+      <input id="cmd" type="text" placeholder='例: 表示する("あ")' enterkeyhint="go">
+      <button class="btn" id="run-btn">実行</button>
+      <button class="btn" id="clear-btn">消す</button>
+    </div>
+    <div class="examples">
+      <button class="ex-btn" data-cmd='表示する("あ")'>表示する</button>
+      <button class="ex-btn" data-cmd='1+1を計算して'>計算</button>
+      <button class="ex-btn" data-cmd='赤い大きな文字で「こんにちは」'>赤い文字</button>
+      <button class="ex-btn" data-cmd='ボタンを作って、押したら色が変わる'>ボタン</button>
+      <button class="ex-btn" data-cmd='犬、猫、鳥のリスト'>リスト</button>
+      <button class="ex-btn" data-cmd='虹色のグラデーション背景にして'>虹色</button>
+      <button class="ex-btn" data-cmd='3×5を計算して大きく表示'>掛け算</button>
+      <button class="ex-btn" data-cmd='時計を表示して'>時計</button>
+    </div>
+    <div id="error-msg"></div>
+  </div>
+  <div id="code-area">
+    <label>AIが生成したコード</label>
+    <div id="generated-code">// ここにコードが表示されます</div>
+    <div id="history"></div>
+  </div>
 </div>
 
 <script>
 'use strict';
 
-const preview = document.getElementById('preview');
-const cmdInput = document.getElementById('cmd');
-const codeView = document.getElementById('generated-code');
-const historyEl = document.getElementById('history');
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const STORAGE_KEY = 'nihongo_code_api_key';
+const HISTORY_KEY = 'nihongo_code_history';
 
-// State
-let currentStyle = {};
-let codeLines = [];
-let historyList = [];
+let apiKey = localStorage.getItem(STORAGE_KEY) || '';
+let historyList = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+let allCodeBlocks = [];
 
-// Color map
-const colorMap = {
-  '赤':'red','青':'blue','緑':'green','黄色':'yellow','黄':'yellow',
-  '白':'white','黒':'black','紫':'purple','橙':'orange','オレンジ':'orange',
-  'ピンク':'pink','水色':'skyblue','灰色':'gray','茶色':'brown','金':'gold',
-  '銀':'silver','紺':'navy',
-};
-function resolveColor(c) { return colorMap[c] || c; }
-
-// Parse & execute
-function execute(raw) {
-  const cmd = raw.replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').replace(/"/g, '"').replace(/"/g, '"').replace(/、/g, ',');
-
-  let html = '';
-  let code = '';
-  let match;
-
-  // 表示する("text")
-  if ((match = cmd.match(/^表示する\("(.+?)"\)$/))) {
-    const text = match[1];
-    const style = styleStr();
-    html = `<p${style ? ` style="${style}"` : ''}>${text}</p>`;
-    code = html;
-  }
-  // 見出し("text") or 見出し("text", 2)
-  else if ((match = cmd.match(/^見出し\("(.+?)"(?:,(\d))?\)$/))) {
-    const text = match[1];
-    const level = match[2] || '1';
-    const style = styleStr();
-    html = `<h${level}${style ? ` style="${style}"` : ''}>${text}</h${level}>`;
-    code = html;
-  }
-  // 色("red")
-  else if ((match = cmd.match(/^色\("(.+?)"\)$/))) {
-    const c = resolveColor(match[1]);
-    currentStyle.color = c;
-    code = `/* 文字色を ${c} に変更 */`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // 大きさ(num)
-  else if ((match = cmd.match(/^大きさ\((\d+)\)$/))) {
-    currentStyle['font-size'] = match[1] + 'px';
-    code = `/* 文字サイズを ${match[1]}px に変更 */`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // 背景色("color")
-  else if ((match = cmd.match(/^背景色\("(.+?)"\)$/))) {
-    const c = resolveColor(match[1]);
-    preview.style.background = c;
-    code = `document.body.style.background = "${c}";`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // ボタン("text")
-  else if ((match = cmd.match(/^ボタン\("(.+?)"\)$/))) {
-    const text = match[1];
-    const id = 'btn-' + Date.now();
-    html = `<button id="${id}" onclick="this.textContent='押された！'" style="padding:12px 24px;font-size:18px;border-radius:8px;border:2px solid #2B5F7E;background:#EEF2F7;cursor:pointer">${text}</button>`;
-    code = `<button onclick="this.textContent='押された！'">${text}</button>`;
-  }
-  // リスト("a","b","c")
-  else if ((match = cmd.match(/^リスト\((.+)\)$/))) {
-    const items = match[1].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, '')) || [];
-    const style = styleStr();
-    html = `<ul${style ? ` style="${style}"` : ''}>` + items.map(i => `<li>${i}</li>`).join('') + '</ul>';
-    code = html;
-  }
-  // くりかえす(n, "text")
-  else if ((match = cmd.match(/^くりかえす\((\d+),"(.+?)"\)$/))) {
-    const n = parseInt(match[1]);
-    const text = match[2];
-    const style = styleStr();
-    html = `<p${style ? ` style="${style}"` : ''}>`;
-    for (let i = 0; i < n; i++) html += text;
-    html += '</p>';
-    code = `for (let i = 0; i < ${n}; i++) {\n  document.write("${text}");\n}`;
-  }
-  // ランダム色()
-  else if (cmd.match(/^ランダム色\(\)$/)) {
-    const c = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
-    currentStyle.color = c;
-    code = `const color = "#" + Math.floor(Math.random()*16777215).toString(16);\n// → ${c}`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // 太字()
-  else if (cmd.match(/^太字\(\)$/)) {
-    currentStyle['font-weight'] = 'bold';
-    code = `/* 太字に変更 */`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // 斜体()
-  else if (cmd.match(/^斜体\(\)$/)) {
-    currentStyle['font-style'] = 'italic';
-    code = `/* 斜体に変更 */`;
-    addHistory(raw, code);
-    render(); return;
-  }
-  // リセット()
-  else if (cmd.match(/^リセット\(\)$/)) {
-    currentStyle = {};
-    preview.style.background = '#fff';
-    preview.innerHTML = '';
-    codeLines = [];
-    code = '/* リセット */';
-    addHistory(raw, code);
-    render(); return;
-  }
-  // 線("text")
-  else if ((match = cmd.match(/^線\("(.+?)"\)$/))) {
-    html = `<hr>`;
-    code = `<hr>`;
-  }
-  // リンク("text", "url")
-  else if ((match = cmd.match(/^リンク\("(.+?)","(.+?)"\)$/))) {
-    html = `<a href="${match[2]}" target="_blank" style="font-size:18px">${match[1]}</a>`;
-    code = html;
-  }
-  // 画像("url")
-  else if ((match = cmd.match(/^画像\("(.+?)"\)$/))) {
-    html = `<img src="${match[1]}" style="max-width:100%;border-radius:8px">`;
-    code = html;
-  }
-  // Unknown
-  else {
-    html = `<p style="color:#C53D43">？ 「${raw}」は分かりません。例: 表示する("あ")</p>`;
-    code = `// エラー: 未知のコマンド`;
-  }
-
-  if (html) {
-    codeLines.push({ html, code, raw });
-  }
-  addHistory(raw, code);
-  render();
+// ---- Setup ----
+function showSetup() {
+  document.getElementById('setup').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
 }
 
-function styleStr() {
-  return Object.entries(currentStyle).map(([k,v]) => `${k}:${v}`).join(';');
+function showApp() {
+  document.getElementById('setup').style.display = 'none';
+  const app = document.getElementById('main-app');
+  app.style.display = 'flex';
+  app.style.flexDirection = 'column';
+  app.style.flex = '1';
+  renderHistory();
 }
 
-function render() {
-  // Render preview
-  let allHtml = '';
-  for (const line of codeLines) {
-    allHtml += line.html;
-  }
-  preview.innerHTML = allHtml;
-
-  // Render code
-  let allCode = '';
-  for (const line of codeLines) {
-    allCode += line.code + '\n';
-  }
-  if (Object.keys(currentStyle).length) {
-    allCode += '\n/* 現在のスタイル: ' + styleStr() + ' */';
-  }
-  codeView.textContent = allCode || '// ここにコードが表示されます';
-}
-
-function addHistory(raw, code) {
-  historyList.push(raw);
-  if (historyList.length > 8) historyList.shift();
-  historyEl.innerHTML = historyList.map(h => `<span>▸ ${h}</span>`).join('');
-  render();
-}
-
-// Events
-document.getElementById('run-btn').addEventListener('click', () => {
-  const val = cmdInput.value.trim();
-  if (!val) return;
-  execute(val);
-  cmdInput.value = '';
-  cmdInput.focus();
+document.getElementById('save-key-btn').addEventListener('click', () => {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return;
+  apiKey = key;
+  localStorage.setItem(STORAGE_KEY, key);
+  showApp();
 });
 
-cmdInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
+// ---- Gemini API ----
+async function askGemini(userInput) {
+  const systemPrompt = `あなたはHTMLコード生成AIです。ユーザーの日本語の指示に従い、HTMLコードを生成してください。
+
+ルール:
+- ユーザーの意図を理解して、HTML/CSS/JavaScriptのコードを生成する
+- レスポンスはHTMLコードのみを返す（説明文やマークダウンは不要）
+- \`\`\`html や \`\`\` のようなコードブロック記法は使わない。純粋なHTMLだけを返す
+- コードは<div>の中にinnerHTMLとして挿入される前提で書く（<html><body>タグは不要）
+- 「表示する("あ")」のような命令は、その文字をHTMLとして表示する
+- 計算の命令（例: 1+1）は、計算結果を大きく表示するHTMLを生成する
+- スタイルはインラインstyleで書く
+- JavaScriptが必要な場合は<script>タグで囲む
+- 見た目は綺麗にする。フォントサイズは大きめに
+- 日本語で応答しない。HTMLコードのみ返す
+- 前のコードとの関連は考えなくてよい。各命令は独立
+
+例:
+入力: 表示する("あ")
+出力: <p style="font-size: 48px;">あ</p>
+
+入力: 1+1を計算して
+出力: <p style="font-size: 64px; font-weight: bold; text-align: center;">1 + 1 = <span style="color: #C53D43;">2</span></p>
+
+入力: 赤い大きな文字で「こんにちは」
+出力: <p style="font-size: 56px; color: red; font-weight: bold;">こんにちは</p>`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ parts: [{ text: userInput }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+      }
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (res.status === 400 || res.status === 403) {
+      throw new Error('APIキーが無効です。設定し直してください。');
+    }
+    throw new Error(err.error?.message || `API Error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Strip markdown code fences if present
+  text = text.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
+
+  return text;
+}
+
+// ---- Execute ----
+async function execute(input) {
+  if (!input.trim()) return;
+
+  const preview = document.getElementById('preview');
+  const codeView = document.getElementById('generated-code');
+  const errorMsg = document.getElementById('error-msg');
+  const runBtn = document.getElementById('run-btn');
+
+  errorMsg.innerHTML = '';
+  runBtn.disabled = true;
+  runBtn.textContent = '...';
+
+  // Show loading in preview
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'loading';
+  loadingEl.textContent = '考え中';
+  preview.appendChild(loadingEl);
+
+  try {
+    const html = await askGemini(input);
+
+    // Remove loading
+    loadingEl.remove();
+
+    // Add to code blocks
+    allCodeBlocks.push({ input, html });
+
+    // Render all blocks in preview
+    renderPreview();
+
+    // Show latest code
+    codeView.textContent = html;
+
+    // History
+    addHistory(input);
+
+  } catch (err) {
+    loadingEl.remove();
+    if (err.message.includes('APIキーが無効')) {
+      errorMsg.innerHTML = `<div class="error">${err.message} <button onclick="resetKey()" style="color:#2B5F7E;background:none;border:none;text-decoration:underline;cursor:pointer">再設定</button></div>`;
+    } else {
+      errorMsg.innerHTML = `<div class="error">${err.message}</div>`;
+    }
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = '実行';
+  }
+}
+
+function renderPreview() {
+  const preview = document.getElementById('preview');
+  preview.innerHTML = '';
+  for (const block of allCodeBlocks) {
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '12px';
+    wrapper.innerHTML = block.html;
+    // Execute any script tags
+    const scripts = wrapper.querySelectorAll('script');
+    preview.appendChild(wrapper);
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement('script');
+      newScript.textContent = oldScript.textContent;
+      oldScript.replaceWith(newScript);
+    });
+  }
+}
+
+function clearAll() {
+  allCodeBlocks = [];
+  document.getElementById('preview').innerHTML = '';
+  document.getElementById('generated-code').textContent = '// ここにコードが表示されます';
+  document.getElementById('error-msg').innerHTML = '';
+}
+
+function resetKey() {
+  localStorage.removeItem(STORAGE_KEY);
+  apiKey = '';
+  showSetup();
+}
+
+// ---- History ----
+function addHistory(input) {
+  historyList = historyList.filter(h => h !== input);
+  historyList.unshift(input);
+  if (historyList.length > 12) historyList.pop();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(historyList));
+  renderHistory();
+}
+
+function renderHistory() {
+  const el = document.getElementById('history');
+  el.innerHTML = historyList.map(h =>
+    `<span onclick="rerun(this)" data-cmd="${h.replace(/"/g, '&quot;')}">${h.length > 15 ? h.slice(0, 15) + '…' : h}</span>`
+  ).join('');
+}
+
+function rerun(el) {
+  document.getElementById('cmd').value = el.dataset.cmd;
+  document.getElementById('cmd').focus();
+}
+
+// ---- Events ----
+document.getElementById('run-btn').addEventListener('click', () => {
+  execute(document.getElementById('cmd').value.trim());
+  document.getElementById('cmd').value = '';
+});
+
+document.getElementById('cmd').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing) {
     e.preventDefault();
     document.getElementById('run-btn').click();
   }
 });
 
-document.getElementById('clear-btn').addEventListener('click', () => {
-  execute('リセット()');
-  cmdInput.focus();
-});
+document.getElementById('clear-btn').addEventListener('click', clearAll);
 
 document.querySelectorAll('.ex-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    cmdInput.value = btn.dataset.cmd;
-    cmdInput.focus();
+    document.getElementById('cmd').value = btn.dataset.cmd;
+    document.getElementById('cmd').focus();
   });
 });
 
-// Initial
-render();
+// ---- Init ----
+if (apiKey) {
+  showApp();
+} else {
+  showSetup();
+}
 </script>
 </body>
 </html>
