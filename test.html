@@ -8,62 +8,81 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
-    height: 100dvh; display: flex; flex-direction: column; background: #f5f5f5;
+    height: 100dvh; display: flex; flex-direction: column; background: #f0f0f0;
   }
 
-  /* Preview */
-  #preview {
-    flex: 1; padding: 16px; overflow: auto; background: #fff;
-    border-bottom: 2px solid #ddd;
-    min-height: 35dvh;
-    font-size: 18px;
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; background: #2B5F7E; color: #fff;
+    flex-shrink: 0;
+  }
+  .topbar h1 { font-size: 15px; flex: 1; }
+  .topbar-btn {
+    background: rgba(255,255,255,0.2); border: none; color: #fff;
+    padding: 6px 12px; border-radius: 6px; font-size: 12px;
+    font-weight: 600; cursor: pointer;
+  }
+  .topbar-btn:active { background: rgba(255,255,255,0.35); }
+
+  /* Variable bar */
+  .var-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 12px; background: #EEF2F7; border-bottom: 1px solid #D0D8E0;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .var-bar label { font-weight: 700; color: #2B5F7E; }
+  .var-value {
+    background: #fff; border: 2px solid #2B5F7E; border-radius: 6px;
+    padding: 4px 10px; font-size: 16px; font-weight: 700;
+    color: #C53D43; min-width: 40px; text-align: center;
+  }
+  .var-bar .var-note { color: #888; font-size: 11px; flex: 1; text-align: right; }
+
+  /* Timeline (scrollable history) */
+  #timeline {
+    flex: 1; overflow-y: auto; padding: 12px;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Input area */
-  #input-area {
-    padding: 10px; background: #fff; border-bottom: 2px solid #2B5F7E;
-    display: flex; flex-direction: column; gap: 6px;
+  /* Entry card */
+  .entry {
+    background: #fff; border-radius: 10px; padding: 12px;
+    margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   }
-  #input-area label { font-size: 12px; font-weight: 700; color: #2B5F7E; }
-  #cmd-row { display: flex; gap: 6px; }
-  #cmd {
-    flex: 1; padding: 10px 12px; border: 2px solid #2B5F7E; border-radius: 8px;
-    font-size: 16px; outline: none; background: #FAFAFA;
+  .entry-cmd {
+    font-size: 12px; color: #2B5F7E; font-weight: 600;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
   }
-  #cmd:focus { border-color: #C53D43; background: #fff; }
-  .btn {
-    padding: 10px 16px; border: none; border-radius: 8px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
+  .entry-cmd .entry-num {
+    background: #2B5F7E; color: #fff; width: 20px; height: 20px;
+    border-radius: 50%; display: inline-flex; align-items: center;
+    justify-content: center; font-size: 10px; flex-shrink: 0;
   }
-  .btn:active { opacity: 0.7; }
-  #run-btn { background: #2B5F7E; color: #fff; }
-  #run-btn:disabled { background: #aaa; }
-  #clear-btn { background: #eee; color: #333; padding: 10px 12px; }
-  .examples { display: flex; gap: 4px; flex-wrap: wrap; }
-  .ex-btn {
-    padding: 4px 10px; background: #EEF2F7; border: 1px solid #D0D8E0;
-    border-radius: 12px; font-size: 11px; cursor: pointer; color: #2B5F7E;
+  .entry-cmd .entry-var {
+    background: #FDECEA; color: #C53D43; padding: 1px 6px;
+    border-radius: 4px; font-size: 10px; margin-left: auto; flex-shrink: 0;
   }
-  .ex-btn:active { background: #D0D8E0; }
+  .entry-result { font-size: 16px; }
+  .entry-code {
+    margin-top: 8px; padding: 8px; background: #1E1E1E; color: #D4D4D4;
+    border-radius: 6px; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px; line-height: 1.4; white-space: pre-wrap;
+    word-break: break-all; max-height: 100px; overflow-y: auto;
+    display: none;
+  }
+  .entry-code.show { display: block; }
+  .entry-toggle {
+    background: none; border: none; color: #999; font-size: 11px;
+    cursor: pointer; margin-top: 4px; padding: 2px 0;
+  }
+  .entry-toggle:active { color: #2B5F7E; }
 
-  /* Code view */
-  #code-area {
-    background: #1E1E1E; overflow: auto;
-    max-height: 22dvh; min-height: 50px;
+  /* Loading entry */
+  .entry-loading {
+    color: #2B5F7E; font-size: 14px;
   }
-  #code-area label {
-    display: block; padding: 6px 12px; font-size: 11px; font-weight: 700;
-    color: #666; background: #161616;
-  }
-  #generated-code {
-    padding: 8px 12px; font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 12px; line-height: 1.5; color: #D4D4D4; white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  /* Loading */
-  .loading { color: #2B5F7E; padding: 8px; font-size: 14px; }
-  .loading::after {
+  .entry-loading::after {
     content: ''; display: inline-block; width: 12px; height: 12px;
     border: 2px solid #2B5F7E; border-top-color: transparent;
     border-radius: 50%; animation: spin 0.6s linear infinite;
@@ -71,7 +90,33 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* API key setup */
+  /* Input area */
+  #input-area {
+    padding: 8px 10px; background: #fff;
+    border-top: 2px solid #2B5F7E; flex-shrink: 0;
+  }
+  #cmd-row { display: flex; gap: 6px; margin-bottom: 6px; }
+  #cmd {
+    flex: 1; padding: 10px 12px; border: 2px solid #ddd; border-radius: 8px;
+    font-size: 16px; outline: none; background: #FAFAFA;
+  }
+  #cmd:focus { border-color: #2B5F7E; background: #fff; }
+  .btn {
+    padding: 10px 16px; border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
+  .btn:active { opacity: 0.7; }
+  #run-btn { background: #2B5F7E; color: #fff; }
+  #run-btn:disabled { background: #aaa; }
+  .examples { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ex-btn {
+    padding: 3px 8px; background: #EEF2F7; border: 1px solid #D0D8E0;
+    border-radius: 10px; font-size: 11px; cursor: pointer; color: #2B5F7E;
+  }
+  .ex-btn:active { background: #D0D8E0; }
+  #error-msg .error { color: #C53D43; font-size: 12px; margin-top: 4px; }
+
+  /* Setup screen */
   #setup {
     display: flex; flex-direction: column; align-items: center;
     justify-content: center; flex: 1; padding: 24px; gap: 16px;
@@ -84,20 +129,33 @@
   }
   #setup input:focus { outline: none; border-color: #2B5F7E; }
   #setup a { color: #2B5F7E; }
-  #setup .btn { width: 100%; max-width: 360px; padding: 14px; font-size: 16px; }
+  #setup .btn { width: 100%; max-width: 360px; padding: 14px; font-size: 16px; background: #2B5F7E; color: #fff; }
 
-  /* History */
-  #history {
-    font-size: 11px; color: #888; padding: 4px 12px 6px;
-    background: #1E1E1E; display: flex; flex-wrap: wrap; gap: 4px;
+  /* Save list screen */
+  #save-screen {
+    display: none; flex-direction: column; flex: 1;
   }
-  #history span {
-    background: #2a2a2a; padding: 2px 8px; border-radius: 8px; cursor: pointer;
+  .save-list { flex: 1; overflow-y: auto; padding: 12px; }
+  .save-item {
+    background: #fff; border-radius: 8px; padding: 12px;
+    margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
   }
-  #history span:active { background: #444; }
+  .save-item:active { background: #f5f5f5; }
+  .save-item-info { flex: 1; }
+  .save-item-title { font-weight: 600; font-size: 14px; }
+  .save-item-meta { font-size: 11px; color: #999; margin-top: 2px; }
+  .save-item-del {
+    background: none; border: none; color: #C53D43; font-size: 18px;
+    cursor: pointer; padding: 8px; min-width: 40px; min-height: 40px;
+    display: flex; align-items: center; justify-content: center;
+  }
 
-  /* Error */
-  .error { color: #C53D43; font-size: 13px; padding: 4px 0; }
+  /* Empty */
+  .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+
+  /* Main app */
+  #main-app { display: none; flex-direction: column; flex: 1; }
 </style>
 </head>
 <body>
@@ -110,98 +168,165 @@
     <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> で無料で取得できます
   </p>
   <input type="password" id="api-key-input" placeholder="AIza...">
-  <button class="btn" id="save-key-btn" style="background:#2B5F7E;color:#fff">はじめる</button>
+  <button class="btn" id="save-key-btn">はじめる</button>
 </div>
 
-<!-- Main App (hidden until key set) -->
-<div id="main-app" style="display:none;flex:1;display:none;flex-direction:column">
-  <div id="preview"></div>
+<!-- Main App -->
+<div id="main-app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <h1>にほんごコード</h1>
+    <button class="topbar-btn" id="undo-btn">← 戻る</button>
+    <button class="topbar-btn" id="save-btn">保存</button>
+    <button class="topbar-btn" id="load-btn">一覧</button>
+  </div>
+
+  <!-- Variable bar -->
+  <div class="var-bar">
+    <label>変数 =</label>
+    <span class="var-value" id="var-display">未設定</span>
+    <span class="var-note">「変数を○にして」で変更</span>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline"></div>
+
+  <!-- Input area -->
   <div id="input-area">
-    <label>にほんごコード — 日本語で自由に命令してみよう</label>
     <div id="cmd-row">
-      <input id="cmd" type="text" placeholder='例: 表示する("あ")' enterkeyhint="go">
+      <input id="cmd" type="text" placeholder='命令を入力...' enterkeyhint="go">
       <button class="btn" id="run-btn">実行</button>
-      <button class="btn" id="clear-btn">消す</button>
     </div>
     <div class="examples">
+      <button class="ex-btn" data-cmd='変数を1にして'>変数=1</button>
+      <button class="ex-btn" data-cmd='1なら「こんにちは」、2なら「さようなら」を表示'>条件分岐</button>
       <button class="ex-btn" data-cmd='表示する("あ")'>表示する</button>
       <button class="ex-btn" data-cmd='1+1を計算して'>計算</button>
-      <button class="ex-btn" data-cmd='赤い大きな文字で「こんにちは」'>赤い文字</button>
+      <button class="ex-btn" data-cmd='赤い大きな文字で「テスト」'>赤文字</button>
       <button class="ex-btn" data-cmd='ボタンを作って、押したら色が変わる'>ボタン</button>
-      <button class="ex-btn" data-cmd='犬、猫、鳥のリスト'>リスト</button>
-      <button class="ex-btn" data-cmd='虹色のグラデーション背景にして'>虹色</button>
-      <button class="ex-btn" data-cmd='3×5を計算して大きく表示'>掛け算</button>
-      <button class="ex-btn" data-cmd='時計を表示して'>時計</button>
+      <button class="ex-btn" data-cmd='リセット'>リセット</button>
     </div>
     <div id="error-msg"></div>
   </div>
-  <div id="code-area">
-    <label>AIが生成したコード</label>
-    <div id="generated-code">// ここにコードが表示されます</div>
-    <div id="history"></div>
-  </div>
 </div>
+
+<!-- Save list screen -->
+<div id="save-screen">
+  <div class="topbar">
+    <button class="topbar-btn" id="back-from-saves">← 戻る</button>
+    <h1>保存データ一覧</h1>
+  </div>
+  <div class="save-list" id="save-list"></div>
+</div>
+
+<!-- File import -->
+<input type="file" id="import-file" accept=".json" style="display:none">
 
 <script>
 'use strict';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const STORAGE_KEY = 'nihongo_code_api_key';
-const HISTORY_KEY = 'nihongo_code_history';
+const SK = {
+  API_KEY: 'nihongo_code_api_key',
+  SESSION: 'nihongo_code_session',
+  SAVES: 'nihongo_code_saves',
+};
 
-let apiKey = localStorage.getItem(STORAGE_KEY) || '';
-let historyList = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-let allCodeBlocks = [];
+let apiKey = localStorage.getItem(SK.API_KEY) || '';
+
+// ---- State ----
+let state = {
+  variable: null,       // current variable value (string or null)
+  entries: [],          // [{ cmd, html, code, variable }]
+};
 
 // ---- Setup ----
 function showSetup() {
   document.getElementById('setup').style.display = 'flex';
   document.getElementById('main-app').style.display = 'none';
+  document.getElementById('save-screen').style.display = 'none';
 }
-
 function showApp() {
   document.getElementById('setup').style.display = 'none';
+  document.getElementById('save-screen').style.display = 'none';
   const app = document.getElementById('main-app');
   app.style.display = 'flex';
-  app.style.flexDirection = 'column';
-  app.style.flex = '1';
-  renderHistory();
+  renderAll();
+}
+function showSaves() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('save-screen').style.display = 'flex';
+  renderSaveList();
 }
 
 document.getElementById('save-key-btn').addEventListener('click', () => {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) return;
   apiKey = key;
-  localStorage.setItem(STORAGE_KEY, key);
+  localStorage.setItem(SK.API_KEY, key);
   showApp();
 });
 
+// ---- Variable handling ----
+function parseVariableSet(input) {
+  // Match patterns like: 変数を1にして, 変数を2にする, 変数=3, 変数をりんごにして
+  const m = input.match(/変数(?:を|=)\s*(.+?)(?:にして|にする|に設定|$)/);
+  if (m) return m[1].trim();
+  return null;
+}
+
+function updateVarDisplay() {
+  const el = document.getElementById('var-display');
+  if (state.variable === null || state.variable === undefined) {
+    el.textContent = '未設定';
+    el.style.color = '#999';
+  } else {
+    el.textContent = state.variable;
+    el.style.color = '#C53D43';
+  }
+}
+
 // ---- Gemini API ----
 async function askGemini(userInput) {
+  const varInfo = state.variable !== null
+    ? `現在の変数の値は「${state.variable}」です。ユーザーが「1なら〜」「2なら〜」のように条件分岐を指示した場合、現在の変数の値に基づいて適切な結果だけを表示してください。`
+    : '変数は未設定です。';
+
+  const prevContext = state.entries.slice(-5).map(e =>
+    `命令: ${e.cmd}\n結果: ${e.code}`
+  ).join('\n---\n');
+
   const systemPrompt = `あなたはHTMLコード生成AIです。ユーザーの日本語の指示に従い、HTMLコードを生成してください。
 
-ルール:
+## 変数の状態
+${varInfo}
+
+## 直近の履歴
+${prevContext || 'なし'}
+
+## ルール
 - ユーザーの意図を理解して、HTML/CSS/JavaScriptのコードを生成する
 - レスポンスはHTMLコードのみを返す（説明文やマークダウンは不要）
 - \`\`\`html や \`\`\` のようなコードブロック記法は使わない。純粋なHTMLだけを返す
 - コードは<div>の中にinnerHTMLとして挿入される前提で書く（<html><body>タグは不要）
 - 「表示する("あ")」のような命令は、その文字をHTMLとして表示する
 - 計算の命令（例: 1+1）は、計算結果を大きく表示するHTMLを生成する
+- 条件分岐（「1なら〜、2なら〜」）は、現在の変数値に基づいて該当する結果のHTMLだけを返す
 - スタイルはインラインstyleで書く
 - JavaScriptが必要な場合は<script>タグで囲む
 - 見た目は綺麗にする。フォントサイズは大きめに
 - 日本語で応答しない。HTMLコードのみ返す
-- 前のコードとの関連は考えなくてよい。各命令は独立
 
-例:
+## 例
 入力: 表示する("あ")
 出力: <p style="font-size: 48px;">あ</p>
 
 入力: 1+1を計算して
 出力: <p style="font-size: 64px; font-weight: bold; text-align: center;">1 + 1 = <span style="color: #C53D43;">2</span></p>
 
-入力: 赤い大きな文字で「こんにちは」
-出力: <p style="font-size: 56px; color: red; font-weight: bold;">こんにちは</p>`;
+入力: 1なら「こんにちは」、2なら「さようなら」を表示（変数=1）
+出力: <p style="font-size: 48px; font-weight: bold;">こんにちは</p>`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
@@ -211,27 +336,21 @@ async function askGemini(userInput) {
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ parts: [{ text: userInput }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
-      }
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
     })
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     if (res.status === 400 || res.status === 403) {
-      throw new Error('APIキーが無効です。設定し直してください。');
+      throw new Error('APIキーが無効です');
     }
     throw new Error(err.error?.message || `API Error: ${res.status}`);
   }
 
   const data = await res.json();
   let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  // Strip markdown code fences if present
   text = text.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
-
   return text;
 }
 
@@ -239,43 +358,58 @@ async function askGemini(userInput) {
 async function execute(input) {
   if (!input.trim()) return;
 
-  const preview = document.getElementById('preview');
-  const codeView = document.getElementById('generated-code');
   const errorMsg = document.getElementById('error-msg');
   const runBtn = document.getElementById('run-btn');
-
   errorMsg.innerHTML = '';
+
+  // Handle "リセット"
+  if (input.trim() === 'リセット') {
+    state.variable = null;
+    state.entries = [];
+    saveSession();
+    renderAll();
+    return;
+  }
+
+  // Handle variable set
+  const varVal = parseVariableSet(input);
+  if (varVal !== null) {
+    state.variable = varVal;
+    state.entries.push({
+      cmd: input,
+      html: `<p style="font-size:20px;">変数を <strong style="color:#C53D43;">${varVal}</strong> に設定しました</p>`,
+      code: `// 変数 = ${varVal}`,
+      variable: varVal,
+    });
+    saveSession();
+    renderAll();
+    return;
+  }
+
+  // Gemini request
   runBtn.disabled = true;
   runBtn.textContent = '...';
 
-  // Show loading in preview
-  const loadingEl = document.createElement('div');
-  loadingEl.className = 'loading';
-  loadingEl.textContent = '考え中';
-  preview.appendChild(loadingEl);
+  // Add temporary loading entry
+  const loadIdx = state.entries.length;
+  state.entries.push({ cmd: input, html: '', code: '', variable: state.variable, loading: true });
+  renderAll();
 
   try {
     const html = await askGemini(input);
-
-    // Remove loading
-    loadingEl.remove();
-
-    // Add to code blocks
-    allCodeBlocks.push({ input, html });
-
-    // Render all blocks in preview
-    renderPreview();
-
-    // Show latest code
-    codeView.textContent = html;
-
-    // History
-    addHistory(input);
-
+    state.entries[loadIdx] = {
+      cmd: input,
+      html,
+      code: html,
+      variable: state.variable,
+    };
+    saveSession();
+    renderAll();
   } catch (err) {
-    loadingEl.remove();
+    state.entries.splice(loadIdx, 1);
+    renderAll();
     if (err.message.includes('APIキーが無効')) {
-      errorMsg.innerHTML = `<div class="error">${err.message} <button onclick="resetKey()" style="color:#2B5F7E;background:none;border:none;text-decoration:underline;cursor:pointer">再設定</button></div>`;
+      errorMsg.innerHTML = `<div class="error">${err.message} <button onclick="resetKey()" style="color:#2B5F7E;background:none;border:none;text-decoration:underline;cursor:pointer;font-size:12px">再設定</button></div>`;
     } else {
       errorMsg.innerHTML = `<div class="error">${err.message}</div>`;
     }
@@ -285,62 +419,171 @@ async function execute(input) {
   }
 }
 
-function renderPreview() {
-  const preview = document.getElementById('preview');
-  preview.innerHTML = '';
-  for (const block of allCodeBlocks) {
-    const wrapper = document.createElement('div');
-    wrapper.style.marginBottom = '12px';
-    wrapper.innerHTML = block.html;
-    // Execute any script tags
-    const scripts = wrapper.querySelectorAll('script');
-    preview.appendChild(wrapper);
+// ---- Render ----
+function renderAll() {
+  updateVarDisplay();
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  if (!state.entries.length) {
+    tl.innerHTML = '<div class="empty">命令を入力すると、ここに結果が表示されます</div>';
+    return;
+  }
+
+  let html = '';
+  state.entries.forEach((e, i) => {
+    html += `<div class="entry" id="entry-${i}">`;
+    html += `<div class="entry-cmd">`;
+    html += `<span class="entry-num">${i + 1}</span> ${escHtml(e.cmd)}`;
+    if (e.variable !== null && e.variable !== undefined) {
+      html += `<span class="entry-var">変数=${escHtml(String(e.variable))}</span>`;
+    }
+    html += `</div>`;
+
+    if (e.loading) {
+      html += `<div class="entry-loading">考え中</div>`;
+    } else {
+      html += `<div class="entry-result" id="result-${i}"></div>`;
+      html += `<button class="entry-toggle" onclick="toggleCode(${i})">コードを見る</button>`;
+      html += `<div class="entry-code" id="code-${i}">${escHtml(e.code)}</div>`;
+    }
+    html += `</div>`;
+  });
+
+  tl.innerHTML = html;
+
+  // Inject HTML results and execute scripts
+  state.entries.forEach((e, i) => {
+    if (e.loading) return;
+    const resultEl = document.getElementById(`result-${i}`);
+    if (!resultEl) return;
+    resultEl.innerHTML = e.html;
+    const scripts = resultEl.querySelectorAll('script');
     scripts.forEach(oldScript => {
       const newScript = document.createElement('script');
       newScript.textContent = oldScript.textContent;
       oldScript.replaceWith(newScript);
     });
-  }
+  });
+
+  // Scroll to bottom
+  tl.scrollTop = tl.scrollHeight;
 }
 
-function clearAll() {
-  allCodeBlocks = [];
-  document.getElementById('preview').innerHTML = '';
-  document.getElementById('generated-code').textContent = '// ここにコードが表示されます';
-  document.getElementById('error-msg').innerHTML = '';
+function toggleCode(i) {
+  const el = document.getElementById(`code-${i}`);
+  if (el) el.classList.toggle('show');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Undo ----
+function undo() {
+  if (!state.entries.length) return;
+  const removed = state.entries.pop();
+  // If the removed entry set a variable, revert to previous
+  if (removed.cmd && parseVariableSet(removed.cmd) !== null) {
+    // Find the last variable-setting entry
+    let lastVar = null;
+    for (let i = state.entries.length - 1; i >= 0; i--) {
+      if (state.entries[i].variable !== null && state.entries[i].variable !== undefined) {
+        const v = parseVariableSet(state.entries[i].cmd);
+        if (v !== null) { lastVar = v; break; }
+      }
+    }
+    state.variable = lastVar;
+  }
+  saveSession();
+  renderAll();
+}
+
+// ---- Session persistence ----
+function saveSession() {
+  localStorage.setItem(SK.SESSION, JSON.stringify(state));
+}
+function loadSession() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SK.SESSION));
+    if (d && d.entries) {
+      state = d;
+      if (state.variable === undefined) state.variable = null;
+    }
+  } catch {}
+}
+
+// ---- Named saves ----
+function getSaves() {
+  try { return JSON.parse(localStorage.getItem(SK.SAVES)) || []; } catch { return []; }
+}
+function setSaves(arr) { localStorage.setItem(SK.SAVES, JSON.stringify(arr)); }
+
+function saveNamed() {
+  const name = prompt('保存名を入力:', `${new Date().toLocaleDateString('ja')} の記録`);
+  if (!name) return;
+  const saves = getSaves();
+  saves.unshift({
+    name,
+    savedAt: new Date().toISOString(),
+    state: JSON.parse(JSON.stringify(state)),
+  });
+  setSaves(saves);
+  alert('保存しました');
+}
+
+function loadNamed(idx) {
+  const saves = getSaves();
+  if (!saves[idx]) return;
+  state = JSON.parse(JSON.stringify(saves[idx].state));
+  saveSession();
+  showApp();
+}
+
+function deleteNamed(idx, ev) {
+  ev.stopPropagation();
+  if (!confirm('この保存データを削除しますか？')) return;
+  const saves = getSaves();
+  saves.splice(idx, 1);
+  setSaves(saves);
+  renderSaveList();
+}
+
+function renderSaveList() {
+  const el = document.getElementById('save-list');
+  const saves = getSaves();
+  if (!saves.length) {
+    el.innerHTML = '<div class="empty">保存データがありません</div>';
+    return;
+  }
+  el.innerHTML = saves.map((s, i) => {
+    const d = new Date(s.savedAt);
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const count = s.state.entries?.length || 0;
+    return `<div class="save-item" onclick="loadNamed(${i})">
+      <div class="save-item-info">
+        <div class="save-item-title">${escHtml(s.name)}</div>
+        <div class="save-item-meta">${dateStr} / ${count}件の命令</div>
+      </div>
+      <button class="save-item-del" onclick="deleteNamed(${i}, event)">×</button>
+    </div>`;
+  }).join('');
 }
 
 function resetKey() {
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(SK.API_KEY);
   apiKey = '';
   showSetup();
 }
 
-// ---- History ----
-function addHistory(input) {
-  historyList = historyList.filter(h => h !== input);
-  historyList.unshift(input);
-  if (historyList.length > 12) historyList.pop();
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(historyList));
-  renderHistory();
-}
-
-function renderHistory() {
-  const el = document.getElementById('history');
-  el.innerHTML = historyList.map(h =>
-    `<span onclick="rerun(this)" data-cmd="${h.replace(/"/g, '&quot;')}">${h.length > 15 ? h.slice(0, 15) + '…' : h}</span>`
-  ).join('');
-}
-
-function rerun(el) {
-  document.getElementById('cmd').value = el.dataset.cmd;
-  document.getElementById('cmd').focus();
-}
-
 // ---- Events ----
 document.getElementById('run-btn').addEventListener('click', () => {
-  execute(document.getElementById('cmd').value.trim());
+  const cmd = document.getElementById('cmd').value.trim();
+  if (!cmd) return;
   document.getElementById('cmd').value = '';
+  execute(cmd);
 });
 
 document.getElementById('cmd').addEventListener('keydown', e => {
@@ -350,7 +593,10 @@ document.getElementById('cmd').addEventListener('keydown', e => {
   }
 });
 
-document.getElementById('clear-btn').addEventListener('click', clearAll);
+document.getElementById('undo-btn').addEventListener('click', undo);
+document.getElementById('save-btn').addEventListener('click', saveNamed);
+document.getElementById('load-btn').addEventListener('click', showSaves);
+document.getElementById('back-from-saves').addEventListener('click', showApp);
 
 document.querySelectorAll('.ex-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -360,6 +606,7 @@ document.querySelectorAll('.ex-btn').forEach(btn => {
 });
 
 // ---- Init ----
+loadSession();
 if (apiKey) {
   showApp();
 } else {
